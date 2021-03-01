@@ -1,0 +1,27 @@
+#########
+# Files #
+#########
+*.elc
+/.org-id-locations
+/abbrev_defs
+/bookmarks
+/custom-set-variables.el
+/history
+/ido.last
+/places
+/recentf
+/tramp
+/viper
+/README.html
+
+###########
+# Folders #
+###########
+/.cache/
+/auto-save-list/
+/elpa/
+/transient/
+/url/
+/var/
+/tramp/
+/games/
