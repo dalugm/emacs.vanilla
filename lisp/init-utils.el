@@ -267,6 +267,7 @@
 (global-set-key (kbd "C-c c c") #'compile)
 (global-set-key (kbd "C-c f f") #'recentf-open-files)
 (global-set-key (kbd "C-c f l") #'recentf-load-list)
+(global-set-key (kbd "C-c l t") #'load-theme)
 ;; be able to M-x without meta
 (global-set-key (kbd "C-c m x") #'execute-extended-command)
 (global-set-key (kbd "C-x 8 s") (lambda ()
@@ -274,12 +275,9 @@
                                   (insert "　")))
 
 ;; toggle
-(global-set-key (kbd "C-c t T") #'text-scale-adjust)
 (global-set-key (kbd "C-c t a") #'abbrev-mode)
 (global-set-key (kbd "C-c t f") #'display-fill-column-indicator-mode)
 (global-set-key (kbd "C-c t j") #'toggle-truncate-lines)
-(global-set-key (kbd "C-c t m") #'pop-to-mark-command)
-(global-set-key (kbd "C-c t o") #'outline-minor-mode)
 (global-set-key (kbd "C-c t r") #'cua-rectangle-mark-mode)
 (global-set-key (kbd "C-c t v") #'view-mode)
 (global-set-key (kbd "C-c t w") #'whitespace-mode)
