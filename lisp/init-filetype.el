@@ -61,6 +61,14 @@
                "\\.jshintrc$")
 (add-interpreter-mode 'js-mode "node")
 
+;; xml
+(add-auto-mode 'xml-mode
+               "\\.xmal\\'"
+               "\\.csproj\\'"
+               "\\.p\\(?:list\\|om\\)\\'"
+               "\\.xs\\(?:d\\|lt\\)\\'"
+               "\\.rss\\'")
+
 ;; snippet
 (add-auto-mode 'snippet-mode "\\.yasnippet\\'")
 
