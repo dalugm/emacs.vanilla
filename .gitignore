@@ -3,7 +3,6 @@
 #########
 *.elc
 /.org-id-locations
-/abbrev_defs
 /bookmarks
 /custom-set-variables.el
 /history
