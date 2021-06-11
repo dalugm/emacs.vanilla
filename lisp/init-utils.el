@@ -166,18 +166,18 @@
 ;; "Undo"(and "redo") changes in the window configuration with the key commands.
 (require 'winner)
 (setq winner-boring-buffers
-  '("*Completions*"
-    "*Compile-Log*"
-    "*inferior-lisp*"
-    "*Apropos*"
-    "*Help*"
-    "*Buffer List*"
-    "*Ibuffer*"))
+      '("*Completions*"
+        "*Compile-Log*"
+        "*inferior-lisp*"
+        "*Apropos*"
+        "*Help*"
+        "*Buffer List*"
+        "*Ibuffer*"))
 (winner-mode +1)
 
 ;; `whitespace-mode' config
 (require 'whitespace)
-(setq whitespace-line-column 80) ;; limit line length
+(setq whitespace-line-column 80)        ; limit line length
 (setq whitespace-style '(face indentation
                          tabs tab-mark
                          spaces space-mark
@@ -264,7 +264,7 @@
 ;;;;;;;;;;;;;;;;;
 ;; keybindings ;;
 ;;;;;;;;;;;;;;;;;
-(global-set-key (kbd "C-c c c") #'compile)
+
 (global-set-key (kbd "C-c f f") #'recentf-open-files)
 (global-set-key (kbd "C-c f l") #'recentf-load-list)
 (global-set-key (kbd "C-c l t") #'load-theme)
