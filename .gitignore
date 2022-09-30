@@ -2,16 +2,22 @@
 # Files #
 #########
 *.elc
+/.lsp*
 /.org-id-locations
+/abbrev_defs
+/amx-items
 /bookmarks
 /custom-set-variables.el
 /history
 /ido.last
 /places
+/projectile*
 /recentf
+/projects
 /tramp
 /viper
 /README.html
+!/site-lisp/README
 
 ###########
 # Folders #
@@ -22,4 +28,8 @@
 /transient/
 /url/
 /tramp/
+/eshell/
 /games/
+/site-lisp/*/
+/server/
+/eln-cache/

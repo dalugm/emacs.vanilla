@@ -9,7 +9,7 @@
 
 ;; do NOT use c-mode-common-hook or cc-mode-hook
 ;; because many major-modes use this hook
-(defun my//cc-mode-common-hook-setup ()
+(defun my--cc-mode-common-hook-setup ()
   "Setup for the common cc-mode configuration."
   (setq c-default-style "k&r")
   (setq c-basic-offset 4)
@@ -17,7 +17,7 @@
   ;; Extend `ff-other-file-alist' if not find related files
   (local-set-key (kbd "C-c c o") #'ff-find-other-file))
 
-(add-hook 'c-mode-common-hook #'my//cc-mode-common-hook-setup)
+(add-hook 'c-mode-common-hook #'my--cc-mode-common-hook-setup)
 
 (provide 'init-cc)
 

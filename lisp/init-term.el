@@ -10,11 +10,14 @@
 
 ;;; Code:
 
-;; use minimum eshell prompt
 (with-eval-after-load 'eshell
-  (setq eshell-prompt-function
-    (lambda ()
-      (concat (getenv "USER") " $ "))))
+  (add-hook 'eshell-mode-hook
+            (lambda ()
+              ;; alias
+              (eshell/alias "f" "find-file $1")
+              (eshell/alias "fo" "find-file-other-window $1")
+              (eshell/alias "d" "dired $1")
+              (eshell/alias "l" "ls -ahlG"))))
 
 (provide 'init-term)
 

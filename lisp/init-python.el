@@ -7,7 +7,7 @@
 
 ;;; Code:
 
-(defun my//python-mode-hook-setup ()
+(defun my--python-mode-hook-setup ()
   "Default configuration for python."
   ;; CamelCase aware editing operations
   (subword-mode +1)
@@ -16,7 +16,7 @@
   (setq python-indent-offset 4)
   (setq python-shell-interpreter "python3"))
 
-(add-hook 'python-mode-hook #'my//python-mode-hook-setup)
+(add-hook 'python-mode-hook #'my--python-mode-hook-setup)
 
 (provide 'init-python)
 
