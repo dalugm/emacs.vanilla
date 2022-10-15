@@ -113,7 +113,6 @@
 (require 'init-sexp)
 (require 'init-cc)
 (require 'init-js)
-(require 'init-ruby)
 (require 'init-python)
 
 ;; personal setup, other major-mode specific setup need it.

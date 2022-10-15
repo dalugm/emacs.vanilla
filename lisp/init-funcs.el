@@ -143,71 +143,6 @@ version control automatically."
 ;; FILE ;;
 ;;;;;;;;;;
 
-(defun my-revert-this-buffer ()
-  "Revert the current buffer."
-  (interactive)
-  (unless (minibuffer-window-active-p (selected-window))
-    (revert-buffer t t)
-    (message "Buffer reverted.")))
-
-(global-set-key [remap revert-buffer] #'my-revert-this-buffer)
-
-(defun my--update-files (&rest files)
-  "Ensure FILES are updated in `recentf', `magit' and `save-place'."
-  (let (toplevels)
-    (dolist (file files)
-      (when (featurep 'vc)
-        (vc-file-clearprops file)
-        (when-let (buffer (get-file-buffer file))
-          (with-current-buffer buffer
-            (vc-refresh-state))))
-      (when (featurep 'magit)
-        (when-let (default-directory (magit-toplevel
-                                      (file-name-directory file)))
-          (cl-pushnew default-directory toplevels)))
-      (unless (file-readable-p file)
-        (when (bound-and-true-p recentf-mode)
-          (recentf-remove-if-non-kept file))))
-    (dolist (default-directory toplevels)
-      (magit-refresh))
-    (when (bound-and-true-p save-place-mode)
-      (save-place-forget-unreadable-files))))
-
-(defun my-copy-this-file (new-path &optional force-p)
-  "Copy current buffer's file to NEW-PATH.
-If FORCE-P, overwrite the target file if it exists, without confirmation."
-  (interactive
-   (list (read-file-name "Copy file to: ")
-         current-prefix-arg))
-  (unless (and buffer-file-name (file-exists-p buffer-file-name))
-    (user-error "Buffer is not visiting any file"))
-  (let ((old-path (buffer-file-name (buffer-base-buffer)))
-        (new-path (expand-file-name new-path)))
-    (make-directory (file-name-directory new-path) 't)
-    (copy-file old-path new-path (or force-p 1))
-    (my--update-files old-path new-path)
-    (message "File copied to %S" (abbreviate-file-name new-path))))
-
-(global-set-key (kbd "C-c f c") #'my-copy-this-file)
-
-(defun my-move-this-file (new-path &optional force-p)
-  "Move current buffer's file to NEW-PATH.
-If FORCE-P, overwrite the target file if it exists, without confirmation."
-  (interactive
-   (list (read-file-name "Move file to: ")
-         current-prefix-arg))
-  (unless (and buffer-file-name (file-exists-p buffer-file-name))
-    (user-error "Buffer is not visiting any file"))
-  (let ((old-path (buffer-file-name (buffer-base-buffer)))
-        (new-path (expand-file-name new-path)))
-    (make-directory (file-name-directory new-path) 't)
-    (rename-file old-path new-path (or force-p 1))
-    (set-visited-file-name new-path t t)
-    (my--update-files old-path new-path)
-    (message "File moved to %S" (abbreviate-file-name new-path))))
-
-(global-set-key (kbd "C-c f m") #'my-move-this-file)
-
 (defun my-rename-this-file (new-name)
   "Rename both current buffer and file to NEW-NAME."
   (interactive "sNew name: ")
@@ -225,23 +160,18 @@ If FORCE-P, overwrite the target file if it exists, without confirmation."
 (global-set-key (kbd "C-c f r") #'my-rename-this-file)
 
 (defun my-copy-file-name ()
-  "Copy current buffer file name to clipboard."
+  "Copy file name to clipboard."
   (interactive)
-  (if-let ((filename (if (equal major-mode 'dired-mode)
-                         default-directory
-                       (buffer-file-name))))
-      (cond
-       ((equal current-prefix-arg nil)   ; no prefix
+  (let ((filename (if (equal major-mode 'dired-mode)
+                      default-directory
+                    (buffer-file-name))))
+    (if filename
         (progn
           (kill-new (file-name-nondirectory filename))
-          (message "Copied [%s]" (file-name-nondirectory filename))))
-       (t                                ; others
-        (progn
-          (kill-new filename)
-          (message "Copied [%s]" filename))))
-    (message "WARNING: Current buffer is not attached to a file!")))
+          (message "Copied [%s]" (file-name-nondirectory filename)))
+      (warn "Current buffer is not attached to a file!"))))
 
-(global-set-key (kbd "C-c f y") #'my-copy-file-name)
+(global-set-key (kbd "C-c f c") #'my-copy-file-name)
 
 (defun my-browse-this-file ()
   "Open current file as a URL using `browse-url'."
@@ -335,50 +265,6 @@ With a prefix ARG always prompt for command to use."
 
 (global-set-key (kbd "C-c f S") #'my-sudo-find-file)
 
-(defun my-save-file-as-utf8 (coding-system)
-  "Revert a buffer with CODING-SYSTEM and save as UTF-8."
-  (interactive "zCoding system for visited file (default nil):")
-  (revert-buffer-with-coding-system coding-system)
-  (set-buffer-file-coding-system 'utf-8)
-  (save-buffer))
-
-(global-set-key (kbd "C-c f u") #'my-save-file-as-utf8)
-
-(defun my-retab (arg &optional beg end)
-  "Convert tabs-to-spaces or spaces-to-tabs within BEG and END.
-Default to buffer start and end, to make indentation consistent.
-Which it does depends on the value of `indent-tab-mode'.
-
-If ARG (universal argument) is non-nil, retab the current buffer
-using the opposite indentation style."
-  (interactive "P\nr")
-  (unless (and beg end)
-    (setq beg (point-min)
-          end (point-max)))
-  (let ((indent-tabs-mode (if arg
-                              (not indent-tabs-mode)
-                            indent-tabs-mode)))
-    (if indent-tabs-mode
-        (tabify beg end)
-      (untabify beg end))))
-
-(defun my-dos2unix ()
-  "Convert the current buffer to UNIX file format."
-  (interactive)
-  (set-buffer-file-coding-system 'undecided-unix nil))
-
-(defun my-unix2dos ()
-  "Convert the current buffer to DOS file format."
-  (interactive)
-  (set-buffer-file-coding-system 'undecided-dos nil))
-
-(defun my-toggle-indent-style ()
-  "Switch between TAB/SPACE indentation style in current buffer."
-  (interactive)
-  (setq indent-tabs-mode (not indent-tabs-mode))
-  (message "Indent style changed to %s."
-           (if indent-tabs-mode "tabs" "spaces")))
-
 ;;;;;;;;;;;;;;
 ;; JUST4FUN ;;
 ;;;;;;;;;;;;;;
@@ -419,16 +305,16 @@ using the opposite indentation style."
 
 (defvar my-search-engine-alist
   '(
-    (baidu          . "https://www.baidu.com/s?wd=")
-    (bing           . "https://www.bing.com/search?q=")
-    (duckduckgo     . "https://www.duckduckgo.com/?q=")
-    (gitee          . "https://search.gitee.com/?q=")
-    (github         . "https://www.github.com/search?q=")
-    (google         . "https://www.google.com/search?q=")
-    (stackoverflow  . "https://stackoverflow.com/search?q=")
-    (vocabulary     . "https://www.vocabulary.com/dictionary/")
-    (wikipedia      . "https://www.wikipedia.org/wiki/Special:Search?go=Go&search=")
-    (youtube        . "https://www.youtube.com/results?search_query=")
+    (baidu         . "https://www.baidu.com/s?wd=")
+    (bing          . "https://www.bing.com/search?q=")
+    (duckduckgo    . "https://www.duckduckgo.com/?q=")
+    (gitee         . "https://search.gitee.com/?q=")
+    (github        . "https://www.github.com/search?q=")
+    (google        . "https://www.google.com/search?q=")
+    (stackoverflow . "https://stackoverflow.com/search?q=")
+    (vocabulary    . "https://www.vocabulary.com/dictionary/")
+    (wikipedia     . "https://www.wikipedia.org/wiki/Special:Search?go=Go&search=")
+    (youtube       . "https://www.youtube.com/results?search_query=")
     )
   "An alist of all the engines you can search by.
 Key is a symbol as the name, value is a plist specifying the search url.")
@@ -532,7 +418,7 @@ And replace it with cli output."
         regexp-history)
   (call-interactively #'occur))
 
-(global-set-key (kbd "M-s o") #'my-occur-dwim)
+(global-set-key (kbd "C-c m o") #'my-occur-dwim)
 
 (defun my-hide-dos-eol ()
   "Do not show  in files containing mixed UNIX and DOS line endings."
@@ -586,7 +472,9 @@ Do NOT mess with special buffers."
   (interactive)
   (when (y-or-n-p "Are you sure you want to kill all buffers but the current with special ones? ")
     (seq-each #'kill-buffer
-              (delete (current-buffer) (seq-filter #'buffer-file-name (buffer-list))))))
+              (delete
+               (current-buffer)
+               (seq-filter #'buffer-file-name (buffer-list))))))
 
 (global-set-key (kbd "C-c m k") #'my-kill-other-buffers-without-special-ones)
 
