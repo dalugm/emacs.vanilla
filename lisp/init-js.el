@@ -7,12 +7,8 @@
 
 ;;; Code:
 
-(defun my--js-mode-hook-setup ()
-  "Default configuration for javascript."
+(with-eval-after-load 'js
   (setq js-indent-level 2))
-
-(add-hook 'js-mode-hook #'my--js-mode-hook-setup)
-(add-hook 'js-jsx-mode-hook #'my--js-mode-hook-setup)
 
 (provide 'init-js)
 

@@ -355,6 +355,9 @@
 (global-set-key (kbd "M-z") #'zap-up-to-char)
 (global-set-key (kbd "M-Z") #'zap-to-char)
 
+(global-set-key (kbd "M-s M-j") #'scroll-other-window)
+(global-set-key (kbd "M-s M-k") #'scroll-other-window-down)
+
 (provide 'init-utils)
 
 ;;; init-utils.el ends here

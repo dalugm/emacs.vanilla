@@ -186,19 +186,23 @@
   ;; -----
   ;; fontify source code in code blocks
   ;; default value is nil after Emacs v24.1
+  ;; then becomes t after Emacs v26.1
+  ;; to keep this always t, we set this explicitly
   (setq org-src-fontify-natively t)
 
-  ;; add SRC_BLOCK supported src
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((emacs-lisp . t)
-     (calc . t)
-     (shell . t)
-     (C . t)
-     (python . t)
-     (ruby . t)
-     (latex . t)
-     (org . t)))
+  (defun my-org-babel-load-languages ()
+    "Add src_block supproted src."
+    (interactive)
+    (org-babel-do-load-languages
+     'org-babel-load-languages
+     '((emacs-lisp . t)
+       (calc . t)
+       (shell . t)
+       (C . t)
+       (python . t)
+       (ruby . t)
+       (latex . t)
+       (org . t))))
 
   ;; ----
   ;; TODO

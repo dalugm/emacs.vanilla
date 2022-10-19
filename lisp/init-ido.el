@@ -1,8 +1,8 @@
-;;; init-complete.el --- Complete setup -*- lexical-binding: t; -*-
+;;; init-ido.el --- Ido setup -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;;
-;;  Complete-related configuration.
+;;  Ido configuration.
 ;;
 
 ;;; Code:
@@ -16,6 +16,6 @@
     (ido-mode +1)
     (ido-everywhere +1)))
 
-(provide 'init-complete)
+(provide 'init-ido)
 
-;;; init-complete.el ends here
+;;; init-ido.el ends here

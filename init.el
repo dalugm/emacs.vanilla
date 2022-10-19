@@ -98,6 +98,7 @@
 (require 'init-dired)
 (require 'init-org)
 (require 'init-ibuffer)
+(require 'init-ido)
 (require 'init-prog)
 (require 'init-check)
 
@@ -106,7 +107,6 @@
   (require 'init-gui))
 (require 'init-misc)
 (require 'init-term)
-(require 'init-complete)
 
 ;; program
 (require 'init-tex)
