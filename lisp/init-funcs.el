@@ -677,15 +677,35 @@ pangu-spacing. The excluded puncuation will be matched to group
 
 (global-set-key (kbd "C-c m p") #'my-pangu-spacing-current-buffer)
 
-(defun my--add-subdirs-to-load-path (parent-dir)
-  "Add every non-hidden subdir of PARENT-DIR to `load-path'."
-  (let ((default-directory parent-dir))
-    (setq load-path
-          (append
-           (cl-remove-if-not
-            #'file-directory-p
-            (directory-files (expand-file-name parent-dir) t "^[^\\.]"))
-           load-path))))
+(defun my--add-subdirs-to-load-path (search-dir)
+  "Add every subdir of SEARCH-DIR to `load-path'."
+  (let ((dir (file-name-as-directory search-dir)))
+    (dolist (subdir
+             ;; filter out unnecessary dirs
+             (cl-remove-if
+              (lambda (subdir)
+                (or
+                 ;; remove if not directory
+                 (not (file-directory-p (concat dir subdir)))
+                 ;; remove dirs such as parent dir, programming language
+                 ;; related dir and version control dir.
+                 (member subdir '("." ".."
+                                  "dist" "node_modules" "__pycache__"
+                                  "RCS" "CVS" "rcs" "cvs"
+                                  ".git" ".github"))))
+              (directory-files dir)))
+      (let ((subdir-path (concat dir (file-name-as-directory subdir))))
+        (when (cl-some (lambda (subdir-file)
+                         (and (file-regular-p
+                               (concat subdir-path subdir-file))
+                              ;; .so .dll are Emacs dynamic library
+                              ;; written in non emacs-lisp
+                              (member (file-name-extension subdir-file)
+                                      '("el" "so" "dll"))))
+                       (directory-files subdir-path))
+          (add-to-list 'load-path subdir-path t))
+        ;; recursively search subdirectories
+        (my--add-subdirs-to-load-path subdir-path)))))
 
 ;; Network Proxy
 (defun my-show-http-proxy ()

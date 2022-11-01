@@ -60,12 +60,6 @@
                    collect `(holiday-fixed 10 ,i "National Day"))
         (holiday-fixed 12 26 "Mao's Birthday")))
 
-;; Add both site-lisp and its immediate subdirs to `load-path'
-(let ((site-lisp-dir (expand-file-name "site-lisp/"
-                                       user-emacs-directory)))
-  (push site-lisp-dir load-path)
-  (my--add-subdirs-to-load-path site-lisp-dir))
-
 (provide 'init-misc)
 
 ;;; init-misc.el ends here
