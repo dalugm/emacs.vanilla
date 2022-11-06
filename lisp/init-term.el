@@ -2,22 +2,19 @@
 
 ;;; Commentary:
 ;;
-;; Configuration about term/shell in Emacs
+;; Terminal inside Emacs.
 ;;
-;; using term is not recommended
-;; because normal EMACS keys won't work.
-;;
+
 
 ;;; Code:
 
-(with-eval-after-load 'eshell
-  (add-hook 'eshell-mode-hook
-            (lambda ()
-              ;; alias
-              (eshell/alias "f" "find-file $1")
-              (eshell/alias "fo" "find-file-other-window $1")
-              (eshell/alias "d" "dired $1")
-              (eshell/alias "l" "ls -ahlG"))))
+;; eshell
+(setq eshell-aliases-file (expand-file-name "lisp/eshell/aliases"
+                                            user-emacs-directory)
+      eshell-rc-script (expand-file-name "lisp/eshell/rc"
+                                         user-emacs-directory)
+      eshell-login-script (expand-file-name "lisp/eshell/login"
+                                            user-emacs-directory))
 
 (provide 'init-term)
 
