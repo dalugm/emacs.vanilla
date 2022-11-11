@@ -7,6 +7,9 @@
 
 ;;; Code:
 
+(add-to-list 'auto-mode-alist
+             (cons "\\.\\(c\\|i\\|r\\)?.py\\'" 'python-mode))
+
 (with-eval-after-load 'python
   (setq python-indent-guess-indent-offset nil)
   (setq python-indent-offset 4))
