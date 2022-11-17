@@ -7,13 +7,13 @@
 
 ;;; Code:
 
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-
 (setq user-init-file (or load-file-name buffer-file-name))
 (setq user-emacs-directory (file-name-directory user-init-file))
 
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
+
 (when (< emacs-major-version 27)
-  (load-file (expand-file-name "early-init.el" user-emacs-directory)))
+  (load (expand-file-name "early-init.el" user-emacs-directory)))
 
 (let ((old-file-name-handler-alist file-name-handler-alist)
       (old-gc-cons-threshold gc-cons-threshold))
@@ -28,43 +28,37 @@
               ;; if x10, half of cpu time is spent on gc when scrolling
               (setq gc-cons-threshold (* 100 old-gc-cons-threshold)))))
 
-;;; Configuration
-
-;; Load configs for specific features and modes
 (require 'init-utils)
 (require 'init-modeline)
 (require 'init-funcs)
 (require 'init-dired)
 (require 'init-org)
 (require 'init-ibuffer)
+
+(when (display-graphic-p)
+  (require 'init-gui))
+
+(require 'init-package)
 (require 'init-ido)
 (require 'init-prog)
 (require 'init-check)
 
-(require 'init-package)
-
 ;; handy tools though not must have
-(when (display-graphic-p)
-  (require 'init-gui))
 (require 'init-misc)
 (require 'init-term)
 
 ;; program
 (require 'init-tex)
 (require 'init-sexp)
-(require 'init-cc)
 (require 'init-js)
 (require 'init-python)
 
-;; personal setup, other major-mode specific setup need it.
+;; personal setup
 (load (expand-file-name "~/.custom.el") t nil)
 
-;; https://www.reddit.com/r/emacs/comments/4q4ixw/how_to_forbid_emacs_to_touch_configuration_files/
-;; See `custom-file' for details.
-(load (setq custom-file
-            (expand-file-name (concat user-emacs-directory
-                                      "custom-set-variables.el")))
-      t t)
+(load
+ (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+ t t)
 
 (message "*** Emacs loaded in %s with %d garbage collections. ***"
          (format "%.2f seconds"

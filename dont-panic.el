@@ -164,7 +164,7 @@
 (global-set-key (kbd "C-c i") #'imenu)
 (global-set-key (kbd "C-c r") #'rectangle-mark-mode)
 
-(defun my-eval-last-sexp (&optional arg)
+(defun my-eval-print-last-sexp (&optional arg)
   "Evaluate sexp before point, insert output below following an arrow.
 With a `\\[universal-argument]' prefix argument ARG, delete the
 sexp before point and insert output into current position."
@@ -186,7 +186,7 @@ sexp before point and insert output into current position."
 
 (dolist (map (list emacs-lisp-mode-map
                    lisp-interaction-mode-map))
-  (define-key map (kbd "C-c C-e") #'my-eval-last-sexp))
+  (define-key map (kbd "C-c C-p") #'my-eval-print-last-sexp))
 
 (add-hook 'emacs-lisp-mode-hook
           (lambda ()
