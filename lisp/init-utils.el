@@ -28,9 +28,6 @@
 (defconst my-root-p (string-equal "root" (getenv "USER"))
   "Root user.")
 
-(setq user-full-name "dalu")
-(setq user-mail-address "mou.tong@outlook.com")
-
 ;; env
 (set-language-environment "UTF-8")
 (set-default-coding-systems 'utf-8)

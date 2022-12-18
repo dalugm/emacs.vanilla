@@ -39,7 +39,9 @@
   (require 'init-gui))
 
 (require 'init-package)
+
 (require 'init-ido)
+
 (require 'init-prog)
 (require 'init-check)
 
