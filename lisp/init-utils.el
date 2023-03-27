@@ -34,6 +34,26 @@
 (set-terminal-coding-system 'utf-8)
 (set-keyboard-coding-system 'utf-8)
 
+;; Fix PATH problem on macOS when using GUI Emacs.
+(when my-mac-x-p
+  (setenv "LANG" "en_US.UTF-8")
+  (condition-case err
+      (let ((path (with-temp-buffer
+                    (insert-file-contents-literally "~/.path")
+                    (buffer-string))))
+        (setenv "PATH" path)
+        (setq exec-path
+              (append (parse-colon-path path) (list exec-directory))))
+    (error (warn "%s" (error-message-string err)))))
+
+;; Use GNU ls as `gls' from `coreutils' if available.
+(when my-mac-p
+  (let ((gls (executable-find "gls")))
+    (if gls
+        (setq insert-directory-program gls)
+      ;; Suppress the Dired warning when not using GNU ls.
+      (setq dired-use-ls-dired nil))))
+
 ;; Coding configuration, last has the highest priority.
 ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html#Recognize-Coding
 (prefer-coding-system 'cp950)
@@ -258,11 +278,11 @@
 ;; Zero width space.
 (global-set-key (kbd "C-c 8 z") (lambda ()
                                   (interactive)
-                                  (insert-char ?\u200b)))
+                                  (insert-char #x200b)))
 ;; Ideographic space.
 (global-set-key (kbd "C-c 8 f") (lambda ()
                                   (interactive)
-                                  (insert-char ?\u3000)))
+                                  (insert-char #x3000)))
 
 ;; Toggle.
 (global-set-key (kbd "C-c t A") #'abbrev-mode)
