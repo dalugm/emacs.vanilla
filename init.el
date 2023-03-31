@@ -50,8 +50,8 @@
 (require 'init-term)
 
 ;; Program.
-(require 'init-tex)
 (require 'init-sexp)
+(require 'init-tex)
 (require 'init-js)
 (require 'init-python)
 
