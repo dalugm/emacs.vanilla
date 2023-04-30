@@ -200,17 +200,17 @@ With a prefix ARG, rename based on current name."
 Default print to 256.  With a prefix ARG, print to specified
 number."
   (interactive "P")
-  (let (num)
-    (setq num (if arg
-                  (string-to-number (read-string "Input a number: "))
-                256))
+  (let ((num (if arg
+                 (string-to-number (read-string "Input a number: "))
+               256))
+        (i 0))
     (switch-to-buffer "*ASCII*")
     (erase-buffer)
     (insert (format "ASCII characters up to number %d.\n" num))
-    (let ((i 0))
-      (while (< i num)
-        (setq i (1+ i))
-        (insert (format "%4d %c\n" i i))))
+    (while (< i num)
+      (setq i (1+ i))
+      (insert (format "%4d %c\n" i i)))
+    (special-mode)
     (goto-char (point-min))))
 
 (defun my-pingan-emacs ()
