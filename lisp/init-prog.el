@@ -7,6 +7,16 @@
 
 ;;; Code:
 
+;; Eldoc.
+(with-eval-after-load 'eldoc
+  ;; Multi-line message should not display too soon.
+  (setq eldoc-idle-delay 1)
+  (setq eldoc-echo-area-use-multiline-p t))
+
+;; Tags.
+;; Don't ask before rereading the TAGS files if they have changed.
+(setq tags-revert-without-query t)
+
 (when (treesit-available-p)
   (require 'treesit)
 
@@ -20,6 +30,7 @@
           (dart       . ("https://github.com/UserNobody14/tree-sitter-dart.git"))
           (dockerfile . ("https://github.com/camdencheek/tree-sitter-dockerfile.git"))
           (elixir     . ("https://github.com/elixir-lang/tree-sitter-elixir.git"))
+          (erlang     . ("https://github.com/WhatsApp/tree-sitter-erlang.git"))
           (go         . ("https://github.com/tree-sitter/tree-sitter-go.git"))
           (gomod      . ("https://github.com/camdencheek/tree-sitter-go-mod.git"))
           (heex       . ("https://github.com/phoenixframework/tree-sitter-heex.git"))
