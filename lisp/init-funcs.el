@@ -323,13 +323,15 @@ Key is a symbol as the name, value is a plist specifying the search url.")
   (interactive)
   (unless buffer-display-table
     (setq buffer-display-table (make-display-table)))
-  (aset buffer-display-table ?\ []))
+  (aset buffer-display-table ?\C-m []))
 
-(defun my-remove-dos-eol ()
+(defun my-dos2unix ()
   "Replace DOS eolns CR LF with Unix eolns CR."
   (interactive)
-  (goto-char (point-min))
-  (while (search-forward "\r" nil t) (replace-match "")))
+  (save-excursion
+    (goto-char (point-min))
+    (while (search-forward (string ?\C-m) nil t)
+      (replace-match "" nil t))))
 
 (defun my-load-theme (x)
   "Disable current theme and load theme X."
