@@ -7,14 +7,6 @@
 
 ;;; Code:
 
-(with-eval-after-load 'eldoc
-  ;; Multi-line message should not display too soon.
-  (setq eldoc-idle-delay 1)
-  (setq eldoc-echo-area-use-multiline-p t))
-
-;; Don't ask before rereading the TAGS files if they have changed.
-(setq tags-revert-without-query t)
-
 (when (treesit-available-p)
   (require 'treesit)
 
@@ -119,12 +111,10 @@
 
   (add-hook 'compilation-filter-hook #'my--colorize-compilation-buffer))
 
-(defun my--generic-prog-mode-hook-setup ()
-  "Generic configuration for `prog-mode'."
-  ;; Camel case aware editing operations.
-  (subword-mode +1))
+(add-hook 'prog-mode-hook #'subword-mode)
 
-(add-hook 'prog-mode-hook #'my--generic-prog-mode-hook-setup)
+;; Don't ask before rereading the TAGS files if they have changed.
+(setq tags-revert-without-query t)
 
 (provide 'init-prog)
 
