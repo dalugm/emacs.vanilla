@@ -206,7 +206,7 @@ See `my-load-font'."
     (set-fontset-font t 'cjk-misc cjk)
     (set-fontset-font t 'symbol cjk nil 'append)))
 
-(global-set-key (kbd "C-c l f") #'my-load-default-font)
+(global-set-key (kbd "C-c m f") #'my-load-default-font)
 
 (defun my-load-font (face font-name size &rest attrs)
   "Set font for FACE to FONT-NAME.
@@ -247,7 +247,7 @@ Use `my-save-font-settings' to save font settings and use
      ',my-font-settings
      nil nil "Automatically saved by `my-load-font'")))
 
-(global-set-key (kbd "C-c l F") #'my-load-font)
+(global-set-key (kbd "C-c m F") #'my-load-font)
 
 (defun my-save-font-settings ()
   "Save font-settings set by `my-load-font'."

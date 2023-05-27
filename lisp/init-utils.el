@@ -72,12 +72,18 @@
     (cond
      (fortune-prog
       (format
+       ;; Comment first line and add two new lines in the end.
        ";; %s\n\n"
        (replace-regexp-in-string
-        "\n" "\n;; "                ; comment each line
+        ;; Comment each line below first line.
+        "\n"
+        "\n;; "
         (replace-regexp-in-string
-         ;; remove trailing line break
-         "\\(\n$\\|\\|\\[m *\\|\\[[0-9][0-9]m *\\)" ""
+         ;; Remove trailing line break.
+         (rx (or (seq ?\n eol)
+                 (seq ?\C-\[ ?\] (zero-or-more space))
+                 (seq ?\[ (+ (any digit)) ?m (zero-or-more space))))
+         ""
          (shell-command-to-string fortune-prog)))))
      (t
       (concat ";; Happy hacking "
@@ -262,7 +268,6 @@
 
 (global-set-key (kbd "C-c f f") #'recentf-open-files)
 (global-set-key (kbd "C-c f l") #'recentf-load-list)
-(global-set-key (kbd "C-c l t") #'load-theme)
 ;; Be able to M-x without meta.
 (global-set-key (kbd "C-c m x") #'execute-extended-command)
 ;; Zero width space.
@@ -270,7 +275,7 @@
                                   (interactive)
                                   (insert-char #x200b)))
 ;; Ideographic space.
-(global-set-key (kbd "C-c 8 f") (lambda ()
+(global-set-key (kbd "C-c 8 i") (lambda ()
                                   (interactive)
                                   (insert-char #x3000)))
 
@@ -287,6 +292,7 @@
 (global-set-key (kbd "C-c t l") #'display-line-numbers-mode)
 (global-set-key (kbd "C-c t r") #'cua-rectangle-mark-mode)
 (global-set-key (kbd "C-c t s") #'subword-mode)
+(global-set-key (kbd "C-c t t") #'load-theme)
 (global-set-key (kbd "C-c t v") #'view-mode)
 (global-set-key (kbd "C-c t w") #'whitespace-mode)
 
