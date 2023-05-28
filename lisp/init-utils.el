@@ -28,12 +28,6 @@
 (defconst my-root-p (string-equal "root" (getenv "USER"))
   "Root user.")
 
-;; Env.
-(set-language-environment "UTF-8")
-(set-default-coding-systems 'utf-8)
-(set-terminal-coding-system 'utf-8)
-(set-keyboard-coding-system 'utf-8)
-
 ;; Fix PATH problem on macOS when using GUI Emacs.
 (when my-mac-x-p
   (setenv "LANG" "en_US.UTF-8")
@@ -54,12 +48,7 @@
       ;; Suppress the Dired warning when not using GNU ls.
       (setq dired-use-ls-dired nil))))
 
-;; Coding configuration, last has the highest priority.
-;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html#Recognize-Coding
-(prefer-coding-system 'cp950)
-(prefer-coding-system 'gb2312)
-(prefer-coding-system 'cp936)
-(prefer-coding-system 'gb18030)
+;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html
 (prefer-coding-system 'utf-8)
 
 ;; Shutdown the startup screen.
