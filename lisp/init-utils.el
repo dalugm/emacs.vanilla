@@ -55,32 +55,37 @@
 (setq inhibit-startup-screen t)
 (setq inhibit-startup-echo-area-message t)
 
-(defun my--show-scratch-buffer-message ()
+(defun my--initial-scratch-message ()
   "Customize `initial-scratch-message'."
   (let ((fortune-prog (executable-find "fortune")))
-    (cond
-     (fortune-prog
-      (format
-       ;; Comment first line and add two new lines in the end.
-       ";; %s\n\n"
-       (replace-regexp-in-string
-        ;; Comment each line below first line.
-        "\n"
-        "\n;; "
+    (format
+     ;; Comment first line and add two new lines in the end.
+     ";; %s\n\n"
+     (replace-regexp-in-string
+      ;; Comment each line below first line.
+      "\n"
+      "\n;; "
+      (cond
+       (fortune-prog
         (replace-regexp-in-string
-         ;; Remove trailing line break.
+         ;; Remove extra escape sequences.
          (rx (or (seq ?\n eol)
-                 (seq ?\C-\[ ?\] (zero-or-more space))
-                 (seq ?\[ (+ (any digit)) ?m (zero-or-more space))))
+                 (seq ?\C-\[ ?\[ (0+ digit) ?m)))
          ""
-         (shell-command-to-string fortune-prog)))))
-     (t
-      (concat ";; Happy hacking "
-              (or user-full-name "")
-              "\n;; - Le vent se lève"
-              "\n;; - il faut tenter de vivre\n\n")))))
+         (shell-command-to-string fortune-prog)))
+       (t
+        (concat "Now, trailblazers"
+                "\nKeep credos in mind"
+                "\n(I won't say it twice!)"
+                "\nOne! Stop staying within the lines"
+                "\nTwo! We always align"
+                "\nThree! Even if we don't gain the upper hand, we'll fight for right"
+                "\nFour! Never care a rap for hindsight"
+                "\nFive! Let us light the night"
+                "\nSix! Even when there are wheels within wheels, go ahead!"
+                "\nGet it pulverized")))))))
 
-(setq-default initial-scratch-message (my--show-scratch-buffer-message))
+(setq-default initial-scratch-message (my--initial-scratch-message))
 
 ;; Nice scrolling.
 (setq scroll-margin 0)
