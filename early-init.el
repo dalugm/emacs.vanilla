@@ -1,23 +1,19 @@
-;;; early-init.el --- Early initialization. -*- lexical-binding: t -*-
+;;; early-init.el --- Early initialization -*- lexical-binding: t -*-
 
 ;;; Commentary:
 ;;
-;; Emacs 27+ introduces early-init.el, which is run before init.el,
-;; before package and UI initialization happens.
+;; The earliest bird.
 ;;
 
 ;;; Code:
 
-;; Prevents outdated byte code files from being loaded
+;; Prevent outdated byte code files from being loaded.
 (setq load-prefer-newer t)
 
-;; Faster to disable these here (before they've been initialized)
+;; Faster to disable these here (before they've been initialized).
 (push '(tool-bar-lines . nil) default-frame-alist)
 (push '(vertical-scroll-bars . nil) default-frame-alist)
-
-;; BUT there's no point in hiding the menu bar on macOS, so let's not do it
-(unless (and (display-graphic-p) (eq system-type 'darwin))
-  (push '(menu-bar-lines . nil) default-frame-alist))
+(push '(menu-bar-lines . nil) default-frame-alist)
 
 (when (eq system-type 'darwin)
   ;; Fix native compilation error.

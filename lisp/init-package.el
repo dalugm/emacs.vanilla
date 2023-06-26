@@ -12,8 +12,6 @@
   (push site-lisp-dir load-path)
   (my--add-subdirs-to-load-path site-lisp-dir))
 
-;; HTTPS URLs should be used where possible
-;; as they offer superior security
 (with-eval-after-load 'package
   (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                       (not (gnutls-available-p))))
