@@ -15,11 +15,7 @@
   (global-set-key (kbd "C-c l f") #'eglot-format)
   (global-set-key (kbd "C-c l q") #'eglot-shutdown)
   (global-set-key (kbd "C-c l Q") #'eglot-shutdown-all)
-  (global-set-key (kbd "C-c l r") #'eglot-rename)
-  ;; Elixir.
-  (when my-mac-p
-    (add-to-list 'eglot-server-programs
-                 '((elixir-ts-mode heex-ts-mode) . ("elixir-ls")))))
+  (global-set-key (kbd "C-c l r") #'eglot-rename))
 
 (provide 'init-lsp)
 
