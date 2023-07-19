@@ -42,6 +42,7 @@
 (when (display-graphic-p)
   (require 'init-gui))
 
+(require 'init-site-lisp)
 (require 'init-package)
 
 (require 'init-ido)

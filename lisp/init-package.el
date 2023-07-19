@@ -7,11 +7,6 @@
 
 ;;; Code:
 
-;; Add both site-lisp and its immediate subdirs to `load-path'
-(let ((site-lisp-dir (expand-file-name "site-lisp" user-emacs-directory)))
-  (push site-lisp-dir load-path)
-  (my--add-subdirs-to-load-path site-lisp-dir))
-
 (with-eval-after-load 'package
   (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
                       (not (gnutls-available-p))))
