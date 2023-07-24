@@ -92,49 +92,17 @@
 (setq scroll-conservatively 100000)
 (setq scroll-preserve-screen-position 1)
 
+;; Disable the annoying bell ring.
+(setq ring-bell-function #'ignore)
+
+;; Repeating C-SPC after popping mark pops it again.
+(setq set-mark-command-repeat-pop t)
+
 ;; Do NOT make backups of files, not safe.
 ;; https://github.com/joedicastro/dotfiles/tree/master/emacs
 (setq auto-save-default nil)
 (setq make-backup-files nil)
 (setq vc-make-backup-files nil)
-
-(require 'recentf)
-(setq recentf-max-saved-items 200)
-;; Simplify save path.
-(setq recentf-filename-handlers '(abbreviate-file-name))
-(dolist (regexp '("^/\\(?:ssh\\|su\\|sudo\\)?x?:"
-                  "/\\.?TAGS\\'" "/\\.?tags\\'"))
-  (add-to-list 'recentf-exclude regexp))
-;; Disable `recentf-cleanup' on recentf start,
-;; because it can be laggy with remote files.
-(setq recentf-auto-cleanup 'never)
-(recentf-mode +1)
-
-(setq-default buffers-menu-max-size 30
-              fill-column 72
-              case-fold-search t
-              grep-highlight-matches t
-              grep-scroll-output t
-              mouse-yank-at-point t
-              set-mark-command-repeat-pop t
-              tooltip-delay 1.5
-
-              ;; ;; New line at the end of file the POSIX standard
-              ;; ;; defines a line is "a sequence of zero or more
-              ;; ;; non-newline characters followed by a terminating
-              ;; ;; newline", so files should end in a newline. Windows
-              ;; ;; doesn't respect this (because it's Windows), but we
-              ;; ;; should, since programmers' tools tend to be POSIX
-              ;; ;; compliant.
-              ;; ;; NOTE: This could accidentally edit others' code.
-              ;; require-final-newline t
-
-              truncate-lines nil
-              truncate-partial-width-windows nil
-              ediff-split-window-function #'split-window-horizontally
-              ediff-window-setup-function #'ediff-setup-windows-plain
-              ;; Disable the annoying bell ring.
-              ring-bell-function #'ignore)
 
 ;; Use y/n instead of yes/no.
 (if (boundp 'use-short-answers)
@@ -187,6 +155,18 @@
 ;; Show matching parentheses.
 (show-paren-mode +1)
 (setq show-paren-context-when-offscreen 'overlay)
+
+(require 'recentf)
+(setq recentf-max-saved-items 200)
+;; Simplify save path.
+(setq recentf-filename-handlers '(abbreviate-file-name))
+(dolist (regexp '("^/\\(?:ssh\\|su\\|sudo\\)?x?:"
+                  "/\\.?TAGS\\'" "/\\.?tags\\'"))
+  (add-to-list 'recentf-exclude regexp))
+;; Disable `recentf-cleanup' on recentf start,
+;; because it can be laggy with remote files.
+(setq recentf-auto-cleanup 'never)
+(recentf-mode +1)
 
 ;; Clean up obsolete buffers automatically.
 (require 'midnight)
@@ -255,6 +235,10 @@
   ;; With GPG 2.1+, this forces gpg-agent to use the Emacs minibuffer to
   ;; prompt for the key passphrase.
   (setq epg-pinentry-mode 'loopback))
+
+;; Ediff.
+(setq ediff-split-window-function #'split-window-horizontally)
+(setq ediff-window-setup-function #'ediff-setup-windows-plain)
 
 ;;;;;;;;;;;;;;;;;
 ;; keybindings ;;
