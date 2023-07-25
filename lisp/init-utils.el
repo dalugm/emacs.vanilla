@@ -102,7 +102,6 @@
 ;; https://github.com/joedicastro/dotfiles/tree/master/emacs
 (setq auto-save-default nil)
 (setq make-backup-files nil)
-(setq vc-make-backup-files nil)
 
 ;; Use y/n instead of yes/no.
 (if (boundp 'use-short-answers)
@@ -171,6 +170,13 @@
 ;; Clean up obsolete buffers automatically.
 (require 'midnight)
 
+;; Meaningful names for buffers with the same name.
+(require 'uniquify)
+;; Rename after killing uniquified.
+(setq uniquify-after-kill-buffer-p t)
+;; Don't muck with special buffers.
+(setq uniquify-ignore-buffers-re "^\\*")
+
 ;; Undo (and redo) changes about the window.
 (require 'winner)
 (setq winner-boring-buffers
@@ -189,13 +195,6 @@
 (setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
 ;; Show zero-width space.
 (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))
-
-;; Meaningful names for buffers with the same name.
-(require 'uniquify)
-;; Rename after killing uniquified.
-(setq uniquify-after-kill-buffer-p t)
-;; Don't muck with special buffers.
-(setq uniquify-ignore-buffers-re "^\\*")
 
 (with-eval-after-load 'tramp
   (push (cons tramp-file-name-regexp nil) backup-directory-alist)
