@@ -104,32 +104,28 @@
 (setq make-backup-files nil)
 
 ;; Use y/n instead of yes/no.
-(if (boundp 'use-short-answers)
-    (setq use-short-answers t)
-  (fset 'yes-or-no-p 'y-or-n-p))
+(fset 'yes-or-no-p 'y-or-n-p)
 
-;;; Tab and Space
+;; Ediff.
+(setq ediff-split-window-function #'split-window-horizontally)
+(setq ediff-window-setup-function #'ediff-setup-windows-plain)
+
+;;; Tab and Space.
+
 ;; Indent with spaces.
 (setq-default indent-tabs-mode nil)
+
 ;; But maintain correct appearance.
 (setq-default tab-width 8)
+
 ;; Smart tab behavior - indent or complete.
 ;; `completion-at-point' is often bound to M-TAB.
 (setq tab-always-indent 'complete)
+
 ;; TAB cycle if there are only few candidates.
 (setq completion-cycle-threshold 3)
 
-;; Enable narrowing commands.
-(put 'narrow-to-region 'disabled nil)
-(put 'narrow-to-page 'disabled nil)
-(put 'narrow-to-defun 'disabled nil)
-
-;; Enabled change region case commands.
-(put 'upcase-region 'disabled nil)
-(put 'downcase-region 'disabled nil)
-
-;; Enable erase-buffer command.
-(put 'erase-buffer 'disabled nil)
+;;; Useful modes.
 
 ;; Disable annoying blink.
 (blink-cursor-mode -1)
@@ -155,27 +151,15 @@
 (show-paren-mode +1)
 (setq show-paren-context-when-offscreen 'overlay)
 
-(require 'recentf)
-(setq recentf-max-saved-items 200)
-;; Simplify save path.
-(setq recentf-filename-handlers '(abbreviate-file-name))
-(dolist (regexp '("^/\\(?:ssh\\|su\\|sudo\\)?x?:"
-                  "/\\.?TAGS\\'" "/\\.?tags\\'"))
-  (add-to-list 'recentf-exclude regexp))
-;; Disable `recentf-cleanup' on recentf start,
-;; because it can be laggy with remote files.
-(setq recentf-auto-cleanup 'never)
-(recentf-mode +1)
-
-;; Clean up obsolete buffers automatically.
-(require 'midnight)
-
 ;; Meaningful names for buffers with the same name.
 (require 'uniquify)
 ;; Rename after killing uniquified.
 (setq uniquify-after-kill-buffer-p t)
 ;; Don't muck with special buffers.
 (setq uniquify-ignore-buffers-re "^\\*")
+
+;; Clean up obsolete buffers automatically.
+(require 'midnight)
 
 ;; Undo (and redo) changes about the window.
 (require 'winner)
@@ -189,6 +173,19 @@
         "*Ibuffer*"))
 (winner-mode +1)
 
+;; Keep track of recently opened files.
+(require 'recentf)
+(setq recentf-max-saved-items 100)
+(dolist (regexp '("^/\\(?:ssh\\|su\\|sudo\\)?x?:"
+                  "/\\.?TAGS\\'" "/\\.?tags\\'"))
+  (add-to-list 'recentf-exclude regexp))
+;; Disable `recentf-cleanup' on recentf start,
+;; because it can be laggy with remote files.
+(setq recentf-auto-cleanup 'never)
+(recentf-mode +1)
+(global-set-key (kbd "C-c f f") #'recentf-open-files)
+(global-set-key (kbd "C-c f l") #'recentf-load-list)
+
 ;; Whitespace.
 (require 'whitespace)
 ;; Search {zero,full}-width space also.
@@ -196,55 +193,22 @@
 ;; Show zero-width space.
 (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))
 
-(with-eval-after-load 'tramp
-  (push (cons tramp-file-name-regexp nil) backup-directory-alist)
+;;; Commands.
 
-  ;; ;; https://github.com/syl20bnr/spacemacs/issues/1921
-  ;; ;; If you tramp is hanging, you can uncomment below line.
-  ;; (setq tramp-ssh-controlmaster-options "-o ControlMaster=auto -o ControlPath='tramp.%%C' -o ControlPersist=no")
+;; Enable narrowing commands.
+(put 'narrow-to-region 'disabled nil)
+(put 'narrow-to-page 'disabled nil)
+(put 'narrow-to-defun 'disabled nil)
 
-  (setq tramp-chunksize 8192))
+;; Enabled change region case commands.
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
 
-;; Change the default behavior of hippie-expand.
-(setq hippie-expand-try-functions-list '(try-expand-dabbrev
-                                         try-expand-dabbrev-all-buffers
-                                         try-expand-dabbrev-from-kill
-                                         try-complete-file-name-partially
-                                         try-complete-file-name
-                                         try-expand-all-abbrevs
-                                         try-expand-list
-                                         try-expand-line
-                                         try-complete-lisp-symbol-partially
-                                         try-complete-lisp-symbol))
-;; Use `hippie-expand' instead of `dabbrev'.
-(global-set-key [remap dabbrev-expand] #'hippie-expand)
+;; Enable erase-buffer command.
+(put 'erase-buffer 'disabled nil)
 
-(with-eval-after-load 'comint
-  ;; Don't echo passwords when communicating with interactive programs:
-  ;; Github prompt is like "Password for 'https://user@github.com/':"
-  (setq comint-password-prompt-regexp
-        (format "%s\\|^ *Password for .*: *$" comint-password-prompt-regexp))
-  (add-hook 'comint-output-filter-functions
-            #'comint-watch-for-password-prompt))
+;;; Keybindings.
 
-;; Security.
-(setq auth-sources '("~/.authinfo.gpg"))
-
-(with-eval-after-load 'epa
-  ;; With GPG 2.1+, this forces gpg-agent to use the Emacs minibuffer to
-  ;; prompt for the key passphrase.
-  (setq epg-pinentry-mode 'loopback))
-
-;; Ediff.
-(setq ediff-split-window-function #'split-window-horizontally)
-(setq ediff-window-setup-function #'ediff-setup-windows-plain)
-
-;;;;;;;;;;;;;;;;;
-;; keybindings ;;
-;;;;;;;;;;;;;;;;;
-
-(global-set-key (kbd "C-c f f") #'recentf-open-files)
-(global-set-key (kbd "C-c f l") #'recentf-load-list)
 ;; Be able to M-x without meta.
 (global-set-key (kbd "C-c m x") #'execute-extended-command)
 ;; Zero width space.
