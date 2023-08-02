@@ -7,6 +7,8 @@
 
 ;;; Code:
 
+;;;; Const.
+
 (defconst my-linux-p (eq system-type 'gnu/linux)
   "Running on GNU/Linux.")
 
@@ -27,6 +29,8 @@
 
 (defconst my-root-p (string-equal "root" (getenv "USER"))
   "Root user.")
+
+;;;; Utility.
 
 ;; Fix PATH problem on macOS when using GUI Emacs.
 (when my-mac-x-p
@@ -110,7 +114,10 @@
 (setq ediff-split-window-function #'split-window-horizontally)
 (setq ediff-window-setup-function #'ediff-setup-windows-plain)
 
-;;; Tab and Space.
+;; Pass `C-u' to `recenter' to put point in the window's center.
+(setq next-error-recenter '(4))
+
+;;;; Tab and Space.
 
 ;; Indent with spaces.
 (setq-default indent-tabs-mode nil)
@@ -125,7 +132,7 @@
 ;; TAB cycle if there are only few candidates.
 (setq completion-cycle-threshold 3)
 
-;;; Useful modes.
+;;;; Useful modes.
 
 ;; Disable annoying blink.
 (blink-cursor-mode -1)
@@ -197,7 +204,7 @@
 (with-eval-after-load 'tramp
   (setq tramp-default-method "ssh"))
 
-;;; Commands.
+;;;; Commands.
 
 ;; Enable narrowing commands.
 (put 'narrow-to-region 'disabled nil)
@@ -211,7 +218,7 @@
 ;; Enable erase-buffer command.
 (put 'erase-buffer 'disabled nil)
 
-;;; Keybindings.
+;;;; Keybindings.
 
 ;; Be able to M-x without meta.
 (global-set-key (kbd "C-c m x") #'execute-extended-command)

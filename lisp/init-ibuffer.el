@@ -9,7 +9,7 @@
 
 (with-eval-after-load 'ibuffer
 
-  ;; Display vc status info in the ibuffer list
+  ;; Display vc status info in the ibuffer list.
   (defun ibuffer-vc--state (file)
     "Return the `vc-state' for FILE, or `nil' if unregistered."
     (ignore-errors (vc-state file)))
@@ -22,7 +22,7 @@
             (symbol-name state)
           "-"))))
 
-  ;; Use human readable Size column instead of original one
+  ;; Use human readable Size column instead of original one.
   (define-ibuffer-column my--size
     (:name "Size" :inline t)
     (cond
@@ -52,7 +52,7 @@
     (:name "VC status")
     (ibuffer-vc--status-string))
 
-  ;; Modify the default ibuffer-formats
+  ;; Modify the default ibuffer-formats.
   (setq ibuffer-formats
         '((mark modified read-only vc-status-mini " "
                 (name 18 18 :left :elide)
@@ -100,12 +100,12 @@
             (list
              (cons "default"
                    (my--ibuffer-generate-filter-groups-alist
-                    ;; created by major mode
+                    ;; Created by major mode.
                     (cl-set-difference
                      (cl-remove-duplicates
                       (my--ibuffer-get-major-modes-list))
                      ignore-modes)
-                    ;; manually created add here
+                    ;; Manually created add here.
                     '(("Modified" (predicate buffer-modified-p
                                              (current-buffer)))))))))
       (setq ibuffer-saved-filter-groups groups)
@@ -115,17 +115,13 @@
         ibuffer-show-empty-filter-groups nil
         ibuffer-display-summary nil)
 
-  (defun my--ibuffer-mode-hook-setup ()
-    "`ibuffer-mode' configuration."
-    (unless (eq ibuffer-sorting-mode 'filename/process)
-      (ibuffer-do-sort-by-filename/process))
-    (ibuffer-switch-to-saved-filter-groups "default"))
-
-  (add-hook 'ibuffer-mode-hook #'my--ibuffer-mode-hook-setup)
-  ;; update filter group when calling `ibuffer'
+  (add-hook 'ibuffer-mode-hook
+            (lambda ()
+              (ibuffer-switch-to-saved-filter-groups "default")))
+  ;; Update filter group when calling `ibuffer'.
   (add-hook 'ibuffer-hook #'my--ibuffer-generate-filter-groups-by-major-mode))
 
-;; replace `buffer-menu' with `ibuffer'
+;; Replace `buffer-menu' with `ibuffer'.
 (global-set-key [remap list-buffers] #'ibuffer)
 
 (provide 'init-ibuffer)

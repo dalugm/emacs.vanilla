@@ -7,9 +7,7 @@
 
 ;;; Code:
 
-;;;;;;;;;;;;
-;; Window ;;
-;;;;;;;;;;;;
+;;;; Window.
 
 (defun my-toggle-two-split-window ()
   "Toggle two window layout vertically or horizontally."
@@ -73,9 +71,7 @@
 
 (global-set-key (kbd "C-c w f") #'my-toggle-full-window)
 
-;;;;;;;;;;
-;; FILE ;;
-;;;;;;;;;;
+;;;; File.
 
 (defun my-rename-this-file (&optional arg)
   "Rename both current buffer and file.
@@ -190,45 +186,7 @@ With a prefix ARG, rename based on current name."
 
 (global-set-key (kbd "C-c f S") #'my-sudo-find-file)
 
-;;;;;;;;;;;;;;
-;; JUST4FUN ;;
-;;;;;;;;;;;;;;
-
-(defun my-print-ascii-table (&optional arg)
-  "Print the ASCII table.
-
-Default print to 256.  With a prefix ARG, print to specified
-number."
-  (interactive "P")
-  (let ((num (if arg
-                 (string-to-number (read-string "Input a number: "))
-               256))
-        (i 0))
-    (switch-to-buffer "*ASCII*")
-    (erase-buffer)
-    (insert (format "ASCII characters up to number %d.\n" num))
-    (while (< i num)
-      (setq i (1+ i))
-      (insert (format "%4d %c\n" i i)))
-    (special-mode)
-    (goto-char (point-min))))
-
-(defun my-pingan-emacs ()
-  "建议击毙, @平安 Emacs."
-  (interactive)
-  (message
-   (let ((list '()))
-     (mapatoms (lambda (sym)
-                 (when (special-form-p sym)
-                   (push sym list))))
-     (mapconcat (lambda (sym)
-                  (format "%s 平安" sym))
-                list
-                "，"))))
-
-;;;;;;;;;;;;;;;;;;;;
-;; SEARCH RELATED ;;
-;;;;;;;;;;;;;;;;;;;;
+;;;; Search.
 
 (defvar my-search-engine-alist
   '(
@@ -266,9 +224,7 @@ Key is a symbol as the name, value is a plist specifying the search url.")
 
 (global-set-key (kbd "C-c s o") #'my-search-online)
 
-;;;;;;;;;;;;;;;
-;; DAILY USE ;;
-;;;;;;;;;;;;;;;
+;;;; Daily.
 
 ;; https://emacs.wordpress.com/2007/01/16/quick-and-dirty-code-folding/
 (defun my-toggle-selective-display (column)
@@ -339,7 +295,7 @@ Key is a symbol as the name, value is a plist specifying the search url.")
                 (completing-read
                  "Choose a theme: "
                  (mapcar #'symbol-name (custom-available-themes)))))
-  (condition-case nil
+  (condition-case _
       (progn
         (mapc #'disable-theme custom-enabled-themes)
         (load-theme (intern x) t))
@@ -634,7 +590,8 @@ pangu-spacing. The excluded puncuation will be matched to group
 
 (global-set-key (kbd "C-c m p") #'my-pangu-spacing-current-buffer)
 
-;; Network Proxy.
+;;;; Proxy.
+
 (defun my-show-http-proxy ()
   "Show http/https proxy."
   (interactive)
@@ -750,6 +707,40 @@ pangu-spacing. The excluded puncuation will be matched to group
 
 (global-set-key (kbd "C-c t p w") #'my-toggle-wsl-socks-proxy)
 (global-set-key (kbd "C-c t p W") #'my-show-wsl-socks-proxy)
+
+;;;; JUST4FUN.
+
+(defun my-print-ascii-table (&optional arg)
+  "Print the ASCII table.
+
+Default print to 256.  With a prefix ARG, print to specified
+number."
+  (interactive "P")
+  (let ((num (if arg
+                 (string-to-number (read-string "Input a number: "))
+               256))
+        (i 0))
+    (switch-to-buffer "*ASCII*")
+    (erase-buffer)
+    (insert (format "ASCII characters up to number %d.\n" num))
+    (while (< i num)
+      (setq i (1+ i))
+      (insert (format "%4d %c\n" i i)))
+    (special-mode)
+    (goto-char (point-min))))
+
+(defun my-pingan-emacs ()
+  "建议击毙, @平安 Emacs."
+  (interactive)
+  (message
+   (let ((list '()))
+     (mapatoms (lambda (sym)
+                 (when (special-form-p sym)
+                   (push sym list))))
+     (mapconcat (lambda (sym)
+                  (format "%s 平安" sym))
+                list
+                "，"))))
 
 (provide 'init-funcs)
 
