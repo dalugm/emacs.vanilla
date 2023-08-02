@@ -10,8 +10,6 @@
 (setq user-init-file (or load-file-name buffer-file-name))
 (setq user-emacs-directory (file-name-directory user-init-file))
 
-(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
-
 (when (< emacs-major-version 27)
   (load (expand-file-name "early-init.el" user-emacs-directory)))
 
@@ -27,6 +25,8 @@
                                          old-file-name-handler-alist)))
               ;; If x10, half of cpu time is spent on gc when scrolling.
               (setq gc-cons-threshold (* 100 old-gc-cons-threshold)))))
+
+(add-to-list 'load-path (expand-file-name "lisp" user-emacs-directory))
 
 (load
  (setq custom-file (expand-file-name "custom.el" user-emacs-directory))

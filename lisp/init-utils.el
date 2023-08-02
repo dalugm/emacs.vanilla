@@ -193,6 +193,10 @@
 ;; Show zero-width space.
 (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))
 
+;; Tramp.
+(with-eval-after-load 'tramp
+  (setq tramp-default-method "ssh"))
+
 ;;; Commands.
 
 ;; Enable narrowing commands.
@@ -236,9 +240,6 @@
 (global-set-key (kbd "C-c t t") #'load-theme)
 (global-set-key (kbd "C-c t v") #'view-mode)
 (global-set-key (kbd "C-c t w") #'whitespace-mode)
-
-;; Abbrevs.
-(setq save-abbrevs 'silently)
 
 ;; Search.
 (global-set-key (kbd "C-c s d") #'find-dired)
