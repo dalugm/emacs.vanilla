@@ -112,6 +112,7 @@
   (add-hook 'compilation-filter-hook #'my--colorize-compilation-buffer))
 
 (add-hook 'prog-mode-hook #'subword-mode)
+(add-hook 'text-mode-hook #'subword-mode)
 
 ;; Don't ask before rereading the TAGS files if they have changed.
 (setq tags-revert-without-query t)
