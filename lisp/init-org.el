@@ -44,7 +44,7 @@
           (level 1)
           end)
       (unless (derived-mode-p 'org-mode)
-        (error "Target buffer `%s' should be in org mode!"
+        (user-error "Target buffer `%s' should be in org mode"
                (current-buffer)))
       (goto-char (point-min))
       ;; Locate YEAR headline, then MONTH headline.
@@ -145,8 +145,10 @@
   ;; C-c . \-1w RET ;; => <2020-05-23 Sat -1w>
   ;; -----------------------------------------
   (define-advice org-time-stamp (:around (fn &rest args) insert-escaped-repeater)
+    "Insert escaped repeater for org timestamp."
     (apply fn args)
-    (when (string-match "\\\\\\([\\+\\-].*\\)" org-read-date-final-answer)
+    (when (string-match (rx "\\" (group (any "+\\-") (0+ nonl)))
+                        org-read-date-final-answer)
       (save-excursion
         (backward-char)
         (insert " "
@@ -162,7 +164,7 @@
       (unless (and (bolp) (org-at-heading-p))
         (org-up-heading-safe)
         (outline-hide-subtree)
-        (error "Boundary reached!"))
+        (message "Boundary reached"))
       (org-overview)
       (org-reveal t)
       (org-fold-show-entry)
