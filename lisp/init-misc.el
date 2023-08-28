@@ -7,6 +7,12 @@
 
 ;;; Code:
 
+(if (>= emacs-major-version 27)
+    (with-eval-after-load 'epg
+      (setq epg-pinentry-mode 'loopback))
+  (with-eval-after-load 'epa
+    (setq epa-pinentry-mode 'loopback)))
+
 (with-eval-after-load 'fortune
   (setq fortune-dir
         (cond
