@@ -348,10 +348,6 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
            (file+headline my--org-read-file "Book")
            "* %^{book name}\n   %u\n" :clock-in t :clock-resume t))))
 
-(with-eval-after-load 'org-src
-  ;; Don't indent the content of a source code block.
-  (setq org-edit-src-content-indentation 0))
-
 (with-eval-after-load 'org-clock
   ;; Save clock data and notes in the LOGBOOK drawer.
   (setq org-clock-into-drawer t)
