@@ -44,6 +44,7 @@
 
 (require 'init-site-lisp)
 (require 'init-package)
+(require 'init-vc)
 
 (require 'init-ido)
 
