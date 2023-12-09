@@ -14,11 +14,14 @@
 (setq org-export-backends '(ascii beamer html latex md))
 
 (with-eval-after-load 'org
-  (setq org-agenda-files `(,org-directory))
-  (setq org-default-notes-file (concat org-directory "/notes.org"))
+  (setq org-agenda-files (list org-directory))
+  (setq org-default-notes-file (expand-file-name "notes.org" org-directory))
 
   ;; Respect property lines.
   (setq org-startup-folded 'nofold)
+
+  ;; Fontify source code in code blocks.
+  (setq org-src-fontify-natively t)
 
   ;; Make Emacs respect kinsoku rules when wrapping lines visually.
   (setq word-wrap-by-category t)
@@ -126,13 +129,13 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview
                                (/ width 2))))
         (when (< offset 0)
           (setq offset 0))
-        (overlay-put ov 'before-string (make-string offset ? )))
+        (overlay-put ov 'before-string (make-string offset #x20)))
        ((and (eq 'right position)
              (= beg (line-beginning-position)))
         (setq offset (floor (- fill-column width)))
         (when (< offset 0)
           (setq offset 0))
-        (overlay-put ov 'before-string (make-string offset ? ))))))
+        (overlay-put ov 'before-string (make-string offset #x20))))))
 
   (advice-add 'org--make-preview-overlay :after #'my--org-justify-fragment-overlay-h)
 
@@ -212,24 +215,6 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
         (advice-remove 'org-create-formula-image #'my--org-renumber-fragment)
       (advice-add 'org-create-formula-image :around #'my--org-renumber-fragment)))
 
-;;;; Babel.
-  ;; Fontify source code in code blocks.
-  (setq org-src-fontify-natively t)
-
-  (defun my-org-babel-load-languages ()
-    "Add src_block supported src."
-    (interactive)
-    (org-babel-do-load-languages
-     'org-babel-load-languages
-     '((emacs-lisp . t)
-       (calc . t)
-       (shell . t)
-       (C . t)
-       (python . t)
-       (ruby . t)
-       (latex . t)
-       (org . t))))
-
 ;;;; Todo.
   ;; `X/Y', X means action when enters the state, Y means action when
   ;; leaves the state. Use `@' to add notes and status information
@@ -255,6 +240,16 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
                     "|"
                     "CANCELLED(c@/!)"))))
 
+;;;; Org-babel.
+(with-eval-after-load 'ob
+  (defun my-org-babel-load-languages ()
+    "Add src_block supported src."
+    (interactive)
+    (org-babel-do-load-languages 'org-babel-load-languages
+                                 '((C . t) (python . t)
+                                   (emacs-lisp . t) (lisp . t)))))
+
+;;;; Org-archive.
 (with-eval-after-load 'org-archive
   (defun my-org-archive-done-tasks ()
     "Archive DONE tasks."
@@ -280,6 +275,7 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
 
 (global-set-key (kbd "C-c o c") #'org-capture)
 
+;;;; Org-capture.
 (with-eval-after-load 'org-capture
   (defcustom my--org-todo-file (concat org-directory "/todo.org")
     "My org todo file."
@@ -348,12 +344,14 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
            (file+headline my--org-read-file "Book")
            "* %^{book name}\n   %u\n" :clock-in t :clock-resume t))))
 
+;;;; Org-clock.
 (with-eval-after-load 'org-clock
   ;; Save clock data and notes in the LOGBOOK drawer.
   (setq org-clock-into-drawer t)
   ;; Remove clocked tasks with 0:00 duration.
   (setq org-clock-out-remove-zero-time-clocks t))
 
+;;;; Ox-latex.
 (with-eval-after-load 'ox-latex
   ;; Export org in Chinese into PDF.
   ;; https://freizl.github.io/posts/2012-04-06-export-orgmode-file-in-Chinese.html
