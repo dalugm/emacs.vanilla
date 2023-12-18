@@ -119,6 +119,21 @@
 ;; Don't ask before rereading the TAGS files if they have changed.
 (setq tags-revert-without-query t)
 
+;;;; Major modes.
+
+(add-to-list 'auto-mode-alist '("\\.[cm]js\\'" . js-mode))
+(with-eval-after-load 'js
+  (setq js-indent-level 2))
+
+(add-to-list 'auto-mode-alist '("\\.[cir]py\\'" . python-mode))
+(with-eval-after-load 'python
+  (setq python-indent-guess-indent-offset nil)
+  (setq python-indent-offset 4))
+
+(with-eval-after-load 'tex-mode
+  (setq tex-command "xelatex")
+  (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
+
 (provide 'init-prog)
 
 ;;; init-prog.el ends here

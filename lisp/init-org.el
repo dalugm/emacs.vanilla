@@ -169,12 +169,12 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
           results)
       (setq results (cl-loop for (begin . env)
                              in (org-element-map
-                                    (org-element-parse-buffer)
-                                    'latex-environment
-                                  (lambda (env)
-                                    (cons
-                                     (org-element-property :begin env)
-                                     (org-element-property :value env))))
+                                 (org-element-parse-buffer)
+                                 'latex-environment
+                                 (lambda (env)
+                                   (cons
+                                    (org-element-property :begin env)
+                                    (org-element-property :value env))))
                              collect
                              (cond
                               ((and (string-match "\\\\begin{equation}" env)
@@ -277,19 +277,19 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
 
 ;;;; Org-capture.
 (with-eval-after-load 'org-capture
-  (defcustom my--org-todo-file (concat org-directory "/todo.org")
+  (defcustom my--org-todo-file (expand-file-name "todo.org" org-directory)
     "My org todo file."
     :type 'string)
 
-  (defcustom my--org-work-file (concat org-directory "/work.org")
+  (defcustom my--org-work-file (expand-file-name "work.org" org-directory)
     "My org work file."
     :type 'string)
 
-  (defcustom my--org-read-file (concat org-directory "/read.org")
+  (defcustom my--org-read-file (expand-file-name "read.org" org-directory)
     "My org reading record file."
     :type 'string)
 
-  (defcustom my--org-bill-file (concat org-directory "/bill.org")
+  (defcustom my--org-bill-file (expand-file-name "bill.org" org-directory)
     "My org billing file."
     :type 'string)
 

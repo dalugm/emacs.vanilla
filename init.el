@@ -57,9 +57,6 @@
 
 ;; Program.
 (require 'init-sexp)
-(require 'init-tex)
-(require 'init-js)
-(require 'init-python)
 (require 'init-lsp)
 
 ;; Personal setup.
