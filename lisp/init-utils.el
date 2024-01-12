@@ -99,7 +99,7 @@
 ;; Use y/n instead of yes/no.
 (fset 'yes-or-no-p 'y-or-n-p)
 
-;; Ediff.
+;;;;; Ediff.
 (setq ediff-split-window-function #'split-window-horizontally)
 (setq ediff-window-setup-function #'ediff-setup-windows-plain)
 
@@ -169,7 +169,7 @@
         "*Ibuffer*"))
 (winner-mode +1)
 
-;; Keep track of recently opened files.
+;;;;; Keep track of recently opened files.
 (require 'recentf)
 (setq recentf-max-saved-items 100)
 (dolist (regexp '("^/\\(?:ssh\\|su\\|sudo\\)?x?:"
@@ -182,16 +182,19 @@
 (global-set-key (kbd "C-c f f") #'recentf-open-files)
 (global-set-key (kbd "C-c f l") #'recentf-load-list)
 
-;; Whitespace.
+;;;;; Whitespace.
 (require 'whitespace)
 ;; Search {zero,full}-width space also.
 (setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
 ;; Show zero-width space.
 (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))
 
-;; Tramp.
-(with-eval-after-load 'tramp
-  (setq tramp-default-method "ssh"))
+;;;;; Tramp.
+(setq tramp-default-method "ssh")
+
+;;;;; Tab-bar.
+(setq tab-bar-show nil)
+(setq tab-bar-new-tab-choice "*scratch*")
 
 ;;;; Commands.
 
