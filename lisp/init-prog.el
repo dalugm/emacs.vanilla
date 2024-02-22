@@ -26,7 +26,7 @@
           (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
           (json "https://github.com/tree-sitter/tree-sitter-json")
-          (lua "https://github.com/MunifTanjim/tree-sitter-lua")
+          (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
           (python "https://github.com/tree-sitter/tree-sitter-python")
           (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
@@ -35,6 +35,7 @@
           (typescript "https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src")
           (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
+  ;; Add `*-ts-mode' to `auto-mode-alist'.
   (dolist (list `((cmake      . (,(rx (or "CMakeLists.txt" ".cmake") eos) . cmake-ts-mode))
                   (dockerfile . (,(rx "Dockerfile" eos) . dockerfile-ts-mode))
                   (elixir     . (,(rx (or ".elixir" (seq ".ex" (opt "s")) "mix.lock") eos) . elixir-ts-mode))
