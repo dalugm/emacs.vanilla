@@ -125,5 +125,4 @@
 (global-set-key [remap list-buffers] #'ibuffer)
 
 (provide 'init-ibuffer)
-
 ;;; init-ibuffer.el ends here

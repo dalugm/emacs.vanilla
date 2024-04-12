@@ -314,7 +314,7 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
               (or (bolp) (insert "\n"))
               (when (/= (point) (point-min)) (org-end-of-subtree t t))
               (insert (make-string level ?*) " " heading "\n"))))
-        (setq level (1+ level))
+        (cl-incf level)
         (setq end (save-excursion (org-end-of-subtree t t))))
       (org-end-of-subtree)))
 
@@ -372,5 +372,4 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
   (setq org-latex-compiler "xelatex"))
 
 (provide 'init-org)
-
 ;;; init-org.el ends here

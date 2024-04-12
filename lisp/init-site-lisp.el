@@ -23,5 +23,4 @@
   (my--add-subdirs-to-load-path site-lisp-dir))
 
 (provide 'init-site-lisp)
-
 ;;; init-site-lisp.el ends here

@@ -136,5 +136,4 @@
   (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
 
 (provide 'init-prog)
-
 ;;; init-prog.el ends here

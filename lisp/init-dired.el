@@ -89,5 +89,4 @@ URL `http://ergoemacs.org/emacs/elisp_dired_rename_space_to_underscore.html'."
 (add-hook 'dired-mode-hook #'my--dired-mode-hook-setup)
 
 (provide 'init-dired)
-
 ;;; init-dired.el ends here

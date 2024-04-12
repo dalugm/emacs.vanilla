@@ -282,5 +282,4 @@ ATTRS."
 (setq inhibit-compacting-font-caches t)
 
 (provide 'init-gui)
-
 ;;; init-gui.el ends here

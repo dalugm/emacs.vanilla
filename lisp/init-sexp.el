@@ -46,5 +46,4 @@ sexp before point and insert output into current position."
   (define-key map (kbd "C-c C-p") #'my-eval-print-last-sexp))
 
 (provide 'init-sexp)
-
 ;;; init-sexp.el ends here

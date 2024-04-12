@@ -44,7 +44,6 @@
 
 ;; Shutdown the startup screen.
 (setq inhibit-startup-screen t)
-(setq inhibit-startup-echo-area-message t)
 
 (defun my--initial-scratch-message ()
   "Customize `initial-scratch-message'."
@@ -99,20 +98,11 @@
 ;; Use y/n instead of yes/no.
 (fset 'yes-or-no-p 'y-or-n-p)
 
-;;;;; Ediff.
-(setq ediff-split-window-function #'split-window-horizontally)
-(setq ediff-window-setup-function #'ediff-setup-windows-plain)
-
 ;; Pass `C-u' to `recenter' to put point in the window's center.
 (setq next-error-recenter '(4))
 
-;;;; Tab and Space.
-
 ;; Indent with spaces.
 (setq-default indent-tabs-mode nil)
-
-;; But maintain correct appearance.
-(setq-default tab-width 8)
 
 ;; Smart tab behavior - indent or complete.
 ;; `completion-at-point' is often bound to M-TAB.
@@ -122,6 +112,10 @@
 (setq completion-cycle-threshold 3)
 
 ;;;; Useful modes.
+
+;; Ediff.
+(setq ediff-split-window-function #'split-window-horizontally)
+(setq ediff-window-setup-function #'ediff-setup-windows-plain)
 
 ;; Disable annoying blink.
 (blink-cursor-mode -1)
@@ -159,14 +153,10 @@
 
 ;; Undo (and redo) changes about the window.
 (require 'winner)
-(setq winner-boring-buffers
-      '("*Completions*"
-        "*Compile-Log*"
-        "*inferior-lisp*"
-        "*Apropos*"
-        "*Help*"
-        "*Buffer List*"
-        "*Ibuffer*"))
+(setq winner-boring-buffers '("*Apropos*" "*Buffer List*"
+                              "*Completions*" "*Compile-Log*"
+                              "*Help*" "*Ibuffer*"
+                              "*inferior-lisp*"))
 (winner-mode +1)
 
 ;;;;; Keep track of recently opened files.
@@ -183,11 +173,12 @@
 (global-set-key (kbd "C-c f l") #'recentf-load-list)
 
 ;;;;; Whitespace.
-(require 'whitespace)
-;; Search {zero,full}-width space also.
-(setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
-;; Show zero-width space.
-(add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))
+(global-set-key (kbd "C-c t w") #'whitespace-mode)
+(with-eval-after-load 'whitespace
+  ;; Search {zero,full}-width space also.
+  (setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
+  ;; Show zero-width space.
+  (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.])))
 
 ;;;;; Tramp.
 (setq tramp-default-method "ssh")
@@ -238,7 +229,6 @@
 (global-set-key (kbd "C-c t s") #'subword-mode)
 (global-set-key (kbd "C-c t t") #'load-theme)
 (global-set-key (kbd "C-c t v") #'view-mode)
-(global-set-key (kbd "C-c t w") #'whitespace-mode)
 
 ;; Search.
 (global-set-key (kbd "C-c s d") #'find-dired)
@@ -279,5 +269,4 @@
 (global-set-key (kbd "M-s M-k") #'scroll-other-window-down)
 
 (provide 'init-utils)
-
 ;;; init-utils.el ends here

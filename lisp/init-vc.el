@@ -11,5 +11,4 @@
 (setq vc-follow-symlinks t)
 
 (provide 'init-vc)
-
 ;;; init-vc.el ends here

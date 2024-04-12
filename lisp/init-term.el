@@ -17,5 +17,4 @@
                                             user-emacs-directory))
 
 (provide 'init-term)
-
 ;;; init-term.el ends here

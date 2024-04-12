@@ -73,5 +73,4 @@ access from `emacsclient'."
                            (server-start)))))
 
 (provide 'init-misc)
-
 ;;; init-misc.el ends here

@@ -18,5 +18,4 @@
   (global-set-key (kbd "C-c l r") #'eglot-rename))
 
 (provide 'init-lsp)
-
 ;;; init-lsp.el ends here

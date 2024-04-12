@@ -58,7 +58,7 @@
           (set-window-buffer w2 b1)
           (set-window-start w1 s2)
           (set-window-start w2 s1)
-          (setq i (1+ i))))))))
+          (cl-incf i)))))))
 
 (global-set-key (kbd "C-c w r") #'my-rotate-windows)
 
@@ -581,12 +581,12 @@ pangu-spacing. The excluded puncuation will be matched to group
   "Enable SOCKS proxy."
   (interactive)
   (require 'socks)
-  (setq url-gateway-method 'socks
-        socks-noproxy '("localhost"))
-  (let* ((proxy (split-string my-socks-proxy ":"))
+  (let* ((proxy (string-split my-socks-proxy ":"))
          (host (car proxy))
-         (port (cadr  proxy)))
-    (setq socks-server `("Default server" ,host ,port 5)))
+         (port (string-to-number (cadr proxy))))
+    (setq url-gateway-method 'socks
+          socks-server `("Default server" ,host ,port 5)
+          socks-noproxy '("localhost")))
   (setenv "all_proxy" (concat "socks5://" my-socks-proxy))
   (my-show-socks-proxy))
 
@@ -594,8 +594,8 @@ pangu-spacing. The excluded puncuation will be matched to group
   "Disable SOCKS proxy."
   (interactive)
   (setq url-gateway-method 'native
-        socks-noproxy nil
-        socks-server nil)
+        socks-server nil
+        socks-noproxy nil)
   (setenv "all_proxy" "")
   (my-show-socks-proxy))
 
@@ -623,12 +623,12 @@ pangu-spacing. The excluded puncuation will be matched to group
   "Enable SOCKS proxy in WSL."
   (interactive)
   (require 'socks)
-  (setq url-gateway-method 'socks
-        socks-noproxy '("localhost"))
-  (let* ((proxy (split-string my-wsl-socks-proxy ":"))
+  (let* ((proxy (string-split my-wsl-socks-proxy ":"))
          (host (car proxy))
-         (port (cadr  proxy)))
-    (setq socks-server `("Default server" ,host ,port 5)))
+         (port (string-to-number (cadr proxy))))
+    (setq url-gateway-method 'socks
+          socks-server `("Default server" ,host ,port 5)
+          socks-noproxy '("localhost")))
   (setenv "all_proxy" (concat "socks5://" my-wsl-socks-proxy))
   (my-show-wsl-socks-proxy))
 
@@ -636,8 +636,8 @@ pangu-spacing. The excluded puncuation will be matched to group
   "Disable SOCKS proxy in WSL."
   (interactive)
   (setq url-gateway-method 'native
-        socks-noproxy nil
-        socks-server nil)
+        socks-server nil
+        socks-noproxy nil)
   (setenv "all_proxy" "")
   (my-show-wsl-socks-proxy))
 
@@ -660,14 +660,14 @@ Default print to 256.  With a prefix ARG, print to specified
 number."
   (interactive "P")
   (let ((num (if arg
-                 (string-to-number (read-string "Input a number: "))
+                 (read-number "Input a number: ")
                256))
         (i 0))
     (switch-to-buffer "*ASCII*")
     (erase-buffer)
     (insert (format "ASCII characters up to number %d.\n" num))
     (while (< i num)
-      (setq i (1+ i))
+      (cl-incf i)
       (insert (format "%4d %c\n" i i)))
     (special-mode)
     (goto-char (point-min))))
@@ -686,5 +686,4 @@ number."
                 "，"))))
 
 (provide 'init-funcs)
-
 ;;; init-funcs.el ends here
