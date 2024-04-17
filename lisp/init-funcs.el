@@ -238,25 +238,9 @@ Key is a symbol as the name, value is a plist specifying the search url.")
 (defun my-switch-scratch-buffer ()
   "Create or switch to the *scratch* buffer."
   (interactive)
-  (if (get-buffer "*scratch*")
-      (switch-to-buffer "*scratch*")
-    (progn
-      (switch-to-buffer (get-buffer-create "*scratch*"))
-      (funcall initial-major-mode)
-      (insert initial-scratch-message))))
+  (pop-to-buffer-same-window (get-scratch-buffer-create)))
 
 (global-set-key (kbd "C-c X") #'my-switch-scratch-buffer)
-
-(defun my-switch-messages-buffer ()
-  "Create or switch to the *Message* buffer."
-  (interactive)
-  (if (get-buffer "*Messages*")
-      (switch-to-buffer "*Messages*")
-    (progn
-      (switch-to-buffer (get-buffer-create "*Messages*"))
-      (messages-buffer-mode))))
-
-(global-set-key (kbd "C-c M") #'my-switch-messages-buffer)
 
 (defun my-occur-dwim ()
   "Call `occur' with a sane default."
