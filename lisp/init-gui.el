@@ -80,7 +80,7 @@
 
 (defvar my-font-alist
   '(("霞鹜文楷等宽" "LXGW WenKai Mono" nil 1)
-    ("等距更纱黑体" "Sarasa Mono SC" nil 1)
+    ("Comic" "ComicShannsMono Nerd Font" "LXGW WenKai Mono" 1)
     ("Fira Code" "FiraCode Nerd Font" "Sarasa Mono SC" 1)
     ("Hack" "Hack Nerd Font" "Sarasa Mono SC" 1)
     ("IBM VGA 8x16" "MxPlus IBM VGA 8x16" "Unifont" 1)
@@ -99,6 +99,7 @@
     ("思源黑体 繁 cjk" nil "Source Han Sans TC" 1)
     ("思源黑体 繁" "Source Han Sans TC" nil 1)
     ("文泉驿等宽正黑" "WenQuanYi Zen Hei Mono" nil 1)
+    ("等距更纱黑体" "Sarasa Mono SC" nil 1)
     ("霞鹜文楷 cjk" nil "LXGW WenKai" 1)
     ("霞鹜文楷" "LXGW WenKai" nil 1))
   "An alist of all the fonts you can switch between by `my-load-font'.

@@ -12,6 +12,7 @@
 (with-eval-after-load 'eglot
   (global-set-key (kbd "C-c l a") #'eglot-code-actions)
   (global-set-key (kbd "C-c l c") #'eglot-show-workspace-configuration)
+  (global-set-key (kbd "C-c l d") #'eldoc)
   (global-set-key (kbd "C-c l f") #'eglot-format)
   (global-set-key (kbd "C-c l q") #'eglot-shutdown)
   (global-set-key (kbd "C-c l Q") #'eglot-shutdown-all)

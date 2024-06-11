@@ -158,8 +158,8 @@ With a prefix ARG, rename based on current name."
   (let ((host (or (file-remote-p file 'host) "localhost")))
     (concat "/" (when (file-remote-p file)
                   (concat (file-remote-p file 'method) ":"
-                          (if-let (user (file-remote-p file 'user))
-                              (concat user "@" host)
+                          (if (file-remote-p file 'user)
+                              (concat (file-remote-p file 'user) "@" host)
                             host)
                           "|"))
             "sudo:root@" host

@@ -45,13 +45,14 @@
     ;; Comment each line below first line.
     "\n"
     "\n;; "
-    (if-let ((fortune-prog (executable-find "fortune")))
+    (if (executable-find "fortune")
         (replace-regexp-in-string
          ;; Remove extra escape sequences.
          (rx (or (seq ?\n eol)
-                 (seq ?\C-\[ ?\[ (0+ digit) ?m)))
+                 (seq ?\C-\[ ?\[ (0+ digit) ?m)
+                 (seq ?\\ (0+ digit))))
          ""
-         (shell-command-to-string fortune-prog))
+         (shell-command-to-string "fortune"))
       (string-join
        '("Now, trailblazers"
          "Keep credos in mind"
