@@ -122,9 +122,8 @@
 (save-place-mode +1)
 
 ;; Automatically reload files was modified by external program.
-(global-auto-revert-mode +1)
-(setq global-auto-revert-non-file-buffers t)
 (setq auto-revert-verbose nil)
+(global-auto-revert-mode +1)
 
 ;; Pairs...
 (electric-pair-mode +1)
