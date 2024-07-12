@@ -196,6 +196,7 @@
 
 ;; Be able to M-x without meta.
 (global-set-key (kbd "C-c m x") #'execute-extended-command)
+
 ;; Zero width space.
 (global-set-key (kbd "C-c 8 z") (lambda ()
                                   (interactive)
@@ -258,6 +259,24 @@
 
 (global-set-key (kbd "M-s M-j") #'scroll-other-window)
 (global-set-key (kbd "M-s M-k") #'scroll-other-window-down)
+
+;;;; Advice.
+
+(define-advice delete-indentation (:around (fn &rest args) chinese)
+  "Add Chinese characters support for `fixup-whitespace'.
+
+Use `cl-letf' to change the behavior of `fixup-whitespace' only when
+called from `delete-indentation'."
+  (cl-letf (((symbol-function #'fixup-whitespace)
+             (lambda ()
+               (save-excursion
+                 (delete-horizontal-space)
+                 (if (or (looking-at "^\\|\\s)")
+                         (save-excursion (forward-char -1)
+                                         (looking-at "\\cc\\|$\\|\\s(\\|\\s'")))
+                     nil
+                   (insert ?\s))))))
+    (apply fn args)))
 
 (provide 'init-utils)
 ;;; init-utils.el ends here
