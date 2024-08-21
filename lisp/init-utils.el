@@ -33,6 +33,8 @@
 ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html
 (prefer-coding-system 'utf-8)
 
+(setq auth-sources '("~/.authinfo.gpg"))
+
 ;; Shutdown the startup screen.
 (setq inhibit-startup-screen t)
 
