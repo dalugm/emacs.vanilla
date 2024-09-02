@@ -33,6 +33,16 @@
 ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Recognize-Coding.html
 (prefer-coding-system 'utf-8)
 
+;; Warn when opening files bigger than 100MB.
+(setq-default large-file-warning-threshold (* 100 1000 1000))
+
+;; https://emacs-china.org/t/topic/25811/9
+(setq-default bidi-display-reordering nil)
+(setq bidi-inhibit-bpa t
+      long-line-threshold 1000
+      large-hscroll-threshold 1000
+      syntax-wholeline-max 1000)
+
 (setq auth-sources '("~/.authinfo.gpg"))
 
 ;; Shutdown the startup screen.
@@ -69,9 +79,6 @@
        "\n")))))
 
 (setq-default initial-scratch-message (my--initial-scratch-message))
-
-;; Warn when opening files bigger than 100MB.
-(setq large-file-warning-threshold (* 100 1000 1000))
 
 ;; Nice scrolling.
 (setq scroll-margin 0)
