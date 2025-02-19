@@ -23,6 +23,8 @@
   ;; Fontify source code in code blocks.
   (setq org-src-fontify-natively t)
 
+  (setq org-edit-src-content-indentation 0)
+
   ;; Make Emacs respect kinsoku rules when wrapping lines visually.
   (setq word-wrap-by-category t)
 
