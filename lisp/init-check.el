@@ -9,8 +9,7 @@
 
 (with-eval-after-load 'flymake
   (global-set-key (kbd "C-c ! b") #'flymake-show-buffer-diagnostics)
-  (global-set-key (kbd "C-c ! p") #'flymake-show-project-diagnostics)
-  (setq flymake-show-diagnostics-at-end-of-line 'short))
+  (global-set-key (kbd "C-c ! p") #'flymake-show-project-diagnostics))
 
 (with-eval-after-load 'flyspell
   (when (executable-find "aspell")
