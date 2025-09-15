@@ -121,5 +121,8 @@
   (setq tex-command "xelatex")
   (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
 
+(with-eval-after-load 'lua-ts-mode
+  (setq lua-ts-indent-offset 3))
+
 (provide 'init-prog)
 ;;; init-prog.el ends here
