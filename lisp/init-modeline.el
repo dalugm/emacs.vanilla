@@ -28,12 +28,10 @@
 (put 'my--mode-line-position 'risky-local-variable t)
 
 (defvar my--mode-line-file-info
-  '("("
-    (:propertize "%p" 'face nil)
+  '((:propertize "%p" 'face nil)
     ;; Judge between local and remote.
     (:propertize "%@" 'face nil)
-    (:propertize "%I" 'face nil)
-    ")")
+    (:propertize "%I" 'face nil))
   "Display file info.")
 (put 'my--mode-line-file-info 'risky-local-variable t)
 
@@ -66,15 +64,12 @@
                 mode-line-remote
                 my--mode-line-buffer-identification
                 my--mode-line-position
-                mode-line-frame-identification
                 my--mode-line-file-info
-                " "
-                evil-mode-line-tag))
+                mode-line-frame-identification))
 
 (setq-default my-mode-line-format-right
               '(""
                 mode-line-misc-info
-                " "
                 my--mode-line-modes
                 (vc-mode vc-mode)
                 " "))
@@ -106,6 +101,7 @@
 ;; ;; `format-time-string' and customize `display-time-format'.
 ;; (setq display-time-format "%a %b %e")
 
+;; Time format.
 (setq system-time-locale "C"
       display-time-24hr-format t
       display-time-day-and-date t
