@@ -4,7 +4,6 @@
 *.elc
 /.lsp*
 /.org-id-locations
-/abbrev_defs
 /amx-items
 /bookmarks
 /custom.el
@@ -27,7 +26,6 @@
 /transient/
 /url/
 /tramp/
-/eshell/
 /games/
 /server/
 /eln-cache/

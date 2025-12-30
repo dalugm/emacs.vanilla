@@ -1,4 +1,4 @@
-;;-*-coding: utf-8;-*-
+;;-*-coding: utf-8; lexical-binding: t; -*-
 (define-abbrev-table 'global-abbrev-table
   '(
     ("azdr" "\\([A-Za-z0-9]+\\)" nil :count 0)
@@ -12,3 +12,7 @@
     ("tagr" "\\([</>=\" A-Za-z0-9]+\\)" nil :count 0)
     ("zws" "​" nil :count 0)
     ))
+
+;; Local Variables:
+;; mode: emacs-lisp
+;; End:
