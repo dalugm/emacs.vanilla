@@ -1194,6 +1194,31 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
 ;; Visit version controlled symlink without asking
 (setq vc-follow-symlinks t)
 
+(defun my-smerge-resolve-all (keep)
+  "Resolve all conflicts while keeping KEEP side.
+
+KEEP is one of `upper', `base', `lower'."
+  (interactive
+   (list (intern (completing-read "Keep: " '(upper base lower)))))
+  (let ((resolve-func
+         (pcase keep
+           ('upper #'smerge-keep-upper)
+           ('base  #'smerge-keep-base)
+           ('lower #'smerge-keep-lower)
+           (_ (error "Invalid keep value: %s" keep))))
+        (resolve-count 0))
+    (save-excursion
+      (goto-char (point-min))
+      (while (ignore-errors (not (smerge-next)))
+        (funcall resolve-func)
+        (cl-incf resolve-count)))
+    (if (> resolve-count 0)
+        (message "Resolved %d conflict(s) using `%s'" resolve-count keep)
+      (message "No conflicts found"))))
+
+(with-eval-after-load 'smerge-mode
+  (define-key smerge-basic-map "R" #'my-smerge-resolve-all))
+
 ;;; Program
 
 (when (and (fboundp 'treesit-available-p)
