@@ -623,6 +623,22 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
 
 ;;;; Org-babel
 (with-eval-after-load 'ob
+  (defun my-org-babel-highlight-result ()
+    "Highlight the result of the current source block.
+
+Adapt from `org-babel-remove-result'."
+    (interactive)
+    (when-let* ((location (org-babel-where-is-src-block-result))
+                (case-fold-search t))
+      (save-excursion
+        (goto-char location)
+        (when (looking-at org-babel-result-regexp)
+          (pulse-momentary-highlight-region
+           (1+ (match-end 0))
+           (progn (forward-line) (org-babel-result-end)))))))
+
+  (add-hook 'org-babel-after-execute-hook #'my-org-babel-highlight-result)
+
   (define-advice org-babel-execute-src-block (:around (fn &rest args) lazy-load-languages)
     "Load languages when needed."
     (let* ((language (org-element-property :language (org-element-at-point)))
@@ -1924,13 +1940,20 @@ is set to after it."
       (advice-add 'mouse-set-point :after #'my--adjust-point-after-click)
     (advice-remove 'mouse-set-point #'my--adjust-point-after-click)))
 
+(defun my--pulse-highlight-region (fn beg end &rest args)
+  "Momentarily highlight the region between BEG and END."
+  (pulse-momentary-highlight-region beg end)
+  (apply fn beg end args))
+
+(advice-add 'kill-ring-save :around #'my--pulse-highlight-region)
+
 (defcustom my-pangu-spacing-excluded-puncuation
   "，。！？、；：‘’“”『』「」【】（）《》"
   "Excluded puncuation when pangu spacing buffer."
-  :group 'convenience
-  :type 'string)
+  :type 'string
+  :group 'convenience)
 
-(defvar my-pangu-spacing-regexp
+(defcustom my-pangu-spacing-regexp
   (rx-to-string
    `(or (and (or (group-n 3 (any ,my-pangu-spacing-excluded-puncuation))
                  (group-n 1 (or (category chinese-two-byte)
@@ -1958,7 +1981,9 @@ characters, but not the punctuation), we first try to match
 excluded puncuation, then the characters that need
 pangu-spacing. The excluded puncuation will be matched to group
 3, and shortcut the matching for Chinese characters.  Thus group
-1 and group 2 will both be non-nil when a pangu space is needed.")
+1 and group 2 will both be non-nil when a pangu space is needed."
+  :type 'regexp
+  :group 'convenience)
 
 (defun my-pangu-spacing-current-buffer ()
   "Pangu space current buffer."
