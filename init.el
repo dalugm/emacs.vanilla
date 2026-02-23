@@ -49,6 +49,54 @@
  (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
  t t)
 
+;;; Package
+
+(with-eval-after-load 'package
+  (defcustom my-package-archive-source 'official
+    "ELPA source for package installation.
+
+Supported values:
+`official'    - Official GNU ELPA and MELPA repositories
+`tuna'        - Tsinghua University TUNA mirror
+`163'         - NetEase 163 mirror
+`emacs-china' - Emacs China community mirror
+
+See also: `package-archives'."
+    :type '(choice
+            (const :tag "official"    official)
+            (const :tag "tuna"        tuna)
+            (const :tag "163"         163)
+            (const :tag "emacs-china" emacs-china))
+    :group 'convenience)
+
+  (setq package-archives (pcase my-package-archive-source
+                           ('official
+                            '(("gnu"    . "https://elpa.gnu.org/packages/")
+                              ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+                              ("melpa"  . "https://melpa.org/packages/")))
+
+                           ('emacs-china
+                            '(("gnu"    . "https://elpa.emacs-china.org/gnu/")
+                              ("nongnu" . "https://elpa.emacs-china.org/nongnu/")
+                              ("melpa"  . "https://elpa.emacs-china.org/melpa/")))
+
+                           ('163
+                            '(("gnu"    . "https://mirrors.163.com/elpa/gnu/")
+                              ("nongnu" . "https://mirrors.163.com/elpa/nongnu/")
+                              ("melpa"  . "https://mirrors.163.com/elpa/melpa/")))
+
+                           ('tuna
+                            '(("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+                              ("nongnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/nongnu/")
+                              ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
+
+                           (_               ; Default using official source
+                            '(("gnu"    . "https://elpa.gnu.org/packages/")
+                              ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+                              ("melpa"  . "https://melpa.org/packages/")))))
+
+  (setq package-install-upgrade-built-in t))
+
 ;;; Long tail
 
 ;; Handle large files
@@ -858,11 +906,13 @@ additional font spec for ASCII and CJK font."
                          (choice (plist :tag "CJK font spec"
                                         :key-type symbol
                                         :value-type natnum)
-                                 (const nil)))))
+                                 (const nil))))
+    :group 'convenience)
 
   (defcustom my-font-size 13
     "Default font size."
-    :type '(natnum :tag "Font size"))
+    :type '(natnum :tag "Font size")
+    :group 'convenience)
 
   (defun my--create-fontset (ascii-spec cjk-spec)
     "Create a fontset NAME with ASCII-SPEC and CJK-SPEC font."
@@ -1244,12 +1294,11 @@ KEEP is one of `upper', `base', `lower'."
   (setq treesit-language-source-alist
         '((bash "https://github.com/tree-sitter/tree-sitter-bash")
           (c "https://github.com/tree-sitter/tree-sitter-c")
+          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (cmake "https://github.com/uyha/tree-sitter-cmake")
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-          (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (css "https://github.com/tree-sitter/tree-sitter-css")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-          (doxygen "https://github.com/tree-sitter-grammars/tree-sitter-doxygen")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
@@ -1260,8 +1309,6 @@ KEEP is one of `upper', `base', `lower'."
           (jsdoc "https://github.com/tree-sitter/tree-sitter-jsdoc")
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
-          (markdown "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil "tree-sitter-markdown/src")
-          (markdown-inline "https://github.com/tree-sitter-grammars/tree-sitter-markdown" nil "tree-sitter-markdown-inline/src")
           (php "https://github.com/tree-sitter/tree-sitter-php" nil "php/src")
           (phpdoc "https://github.com/claytonrcarter/tree-sitter-phpdoc")
           (python "https://github.com/tree-sitter/tree-sitter-python")
@@ -1350,9 +1397,6 @@ KEEP is one of `upper', `base', `lower'."
 (with-eval-after-load 'tex-mode
   (setq tex-command "xelatex")
   (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
-
-(with-eval-after-load 'lua-ts-mode
-  (setq lua-ts-indent-offset 3))
 
 ;;; S-expression
 
@@ -1622,8 +1666,8 @@ With a prefix ARG, rename based on current name."
 
 (defcustom my-http-proxy "127.0.0.1:1080"
   "HTTP proxy."
-  :group 'convenience
-  :type 'string)
+  :type 'string
+  :group 'convenience)
 
 (defcustom my-socks-proxy
   (list
@@ -1635,9 +1679,9 @@ With a prefix ARG, rename based on current name."
      "127.0.0.1")
    1080)
   "SOCKS proxy."
-  :group 'convenience
   :type '(list (string :tag "Host")
-               (integer :tag "Port")))
+               (integer :tag "Port"))
+  :group 'convenience)
 
 (defun my-show-http-proxy ()
   "Show http/https proxy."
@@ -2069,8 +2113,8 @@ number."
 (defcustom my-run-emacs-as-a-server nil
   "Non-nil means to run Emacs as a server process, which allows
 access from `emacsclient'."
-  :group 'convenience
-  :type 'boolean)
+  :type 'boolean
+  :group 'convenience)
 
 (when my-run-emacs-as-a-server
   (run-with-idle-timer 3 nil
