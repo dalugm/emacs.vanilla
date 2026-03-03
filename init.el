@@ -594,39 +594,35 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
           equation-number
           results)
       (setq results (cl-loop for (begin . env)
-                             in (org-element-map
-                                    (org-element-parse-buffer)
-                                    'latex-environment
+                             in (org-element-map (org-element-parse-buffer) 'latex-environment
                                   (lambda (env)
-                                    (cons
-                                     (org-element-property :begin env)
-                                     (org-element-property :value env))))
-                             collect
-                             (cond
-                              ((and (string-match "\\\\begin{equation}" env)
-                                    (not (string-match "\\\\tag{" env)))
-                               (cl-incf counter)
-                               (cons begin counter))
-                              ((and (string-match "\\\\begin{align}" env)
-                                    (string-match "\\\\notag" env))
-                               (cl-incf counter)
-                               (cons begin counter))
-                              ((string-match "\\\\begin{align}" env)
-                               (prog2
-                                   (cl-incf counter)
-                                   (cons begin counter)
-                                 (with-temp-buffer
-                                   (insert env)
-                                   (goto-char (point-min))
-                                   ;; `\\' is used for a new line.
-                                   ;; Each one leads to a number.
-                                   (cl-incf counter (count-matches "\\\\$"))
-                                   ;; Unless there are nonumbers.
-                                   (goto-char (point-min))
-                                   (cl-decf counter
-                                            (count-matches "\\nonumber")))))
-                              (t
-                               (cons begin nil)))))
+                                    (cons (org-element-property :begin env)
+                                          (org-element-property :value env))))
+                             collect (cond
+                                      ((and (string-match "\\\\begin{equation}" env)
+                                            (not (string-match "\\\\tag{" env)))
+                                       (cl-incf counter)
+                                       (cons begin counter))
+                                      ((and (string-match "\\\\begin{align}" env)
+                                            (string-match "\\\\notag" env))
+                                       (cl-incf counter)
+                                       (cons begin counter))
+                                      ((string-match "\\\\begin{align}" env)
+                                       (prog2
+                                           (cl-incf counter)
+                                           (cons begin counter)
+                                         (with-temp-buffer
+                                           (insert env)
+                                           (goto-char (point-min))
+                                           ;; `\\' is used for a new line.
+                                           ;; Each one leads to a number.
+                                           (cl-incf counter (count-matches "\\\\$"))
+                                           ;; Unless there are nonumbers.
+                                           (goto-char (point-min))
+                                           (cl-decf counter
+                                                    (count-matches "\\nonumber")))))
+                                      (t
+                                       (cons begin nil)))))
       (when (setq equation-number (cdr (assoc (point) results)))
         (setf (car args)
               (concat
@@ -1332,7 +1328,7 @@ KEEP is one of `upper', `base', `lower'."
                   (yaml       . (,(rx ".y" (opt "a") "ml" eos) . yaml-ts-mode))))
     (let ((parser (car list))
           (alist (cdr list)))
-      (when (treesit-ready-p parser 'message)
+      (when (treesit-language-available-p parser)
         (add-to-list 'auto-mode-alist alist))))
 
   (setq major-mode-remap-alist
