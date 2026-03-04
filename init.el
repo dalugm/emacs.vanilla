@@ -1438,6 +1438,9 @@ sexp before point and insert output into current position."
 
 (when (fboundp 'eglot)
   (global-set-key (kbd "C-c l l") #'eglot)
+  (setq eglot-autoshutdown t)
+  (setq eglot-extend-to-xref t)
+  (setq eglot-ignored-server-capabilities '(:documentHighlightProvider))
 
   (with-eval-after-load 'eglot
     (global-set-key (kbd "C-c l a") #'eglot-code-actions)
@@ -1449,6 +1452,7 @@ sexp before point and insert output into current position."
     (global-set-key (kbd "C-c l n") #'eglot-rename)
     (global-set-key (kbd "C-c l q") #'eglot-shutdown)
     (global-set-key (kbd "C-c l t") #'eglot-find-typeDefinition)
+    (global-set-key (kbd "C-c l L") #'eglot-events-buffer)
     (global-set-key (kbd "C-c l R") #'eglot-reconnect)
     (global-set-key (kbd "C-c l Q") #'eglot-shutdown-all)))
 
