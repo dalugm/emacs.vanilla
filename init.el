@@ -49,6 +49,10 @@
  (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
  t t)
 
+(defconst my-treesit-available-p (and (fboundp 'treesit-available-p)
+                                      (treesit-available-p))
+  "Non-nil if tree-sitter support is built-in and available.")
+
 ;;; Package
 
 (with-eval-after-load 'package
@@ -95,6 +99,7 @@ See also: `package-archives'."
                               ("nongnu" . "https://elpa.nongnu.org/nongnu/")
                               ("melpa"  . "https://melpa.org/packages/")))))
 
+  (setq package-vc-allow-build-commands t)
   (setq package-install-upgrade-built-in t))
 
 ;;; Long tail
@@ -159,6 +164,9 @@ See also: `package-archives'."
 
 ;; Pairs...
 (electric-pair-mode +1)
+
+;; Sub-word
+(global-subword-mode +1)
 
 ;; Show matching parentheses
 (show-paren-mode +1)
@@ -1251,150 +1259,64 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
     (ido-mode +1)
     (ido-everywhere +1)))
 
-;;; Version control
+;;; Prog
 
-;; Visit version controlled symlink without asking
-(setq vc-follow-symlinks t)
+;;;; c-ts-mode
 
-(defun my-smerge-resolve-all (keep)
-  "Resolve all conflicts while keeping KEEP side.
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(c-mode . c-ts-mode))
+  (add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode)))
 
-KEEP is one of `upper', `base', `lower'."
-  (interactive
-   (list (intern (completing-read "Keep: " '(upper base lower)))))
-  (let ((resolve-func
-         (pcase keep
-           ('upper #'smerge-keep-upper)
-           ('base  #'smerge-keep-base)
-           ('lower #'smerge-keep-lower)
-           (_ (error "Invalid keep value: %s" keep))))
-        (resolve-count 0))
-    (save-excursion
-      (goto-char (point-min))
-      (while (ignore-errors (not (smerge-next)))
-        (funcall resolve-func)
-        (cl-incf resolve-count)))
-    (if (> resolve-count 0)
-        (message "Resolved %d conflict(s) using `%s'" resolve-count keep)
-      (message "No conflicts found"))))
+(with-eval-after-load 'c-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(c . ("https://github.com/tree-sitter/tree-sitter-c")))
+    (unless (treesit-language-available-p 'c)
+      (treesit-install-language-grammar 'c))
 
-(with-eval-after-load 'smerge-mode
-  (define-key smerge-basic-map "R" #'my-smerge-resolve-all))
+    (add-to-list 'treesit-language-source-alist
+                 '(cpp . ("https://github.com/tree-sitter/tree-sitter-cpp")))
+    (unless (treesit-language-available-p 'cpp)
+      (treesit-install-language-grammar 'cpp))))
 
-;;; Program
+;;;; cmake-ts-mode
 
-(when (and (fboundp 'treesit-available-p)
-           (treesit-available-p))
-  (require 'treesit)
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist
+               '("\\(?:CMakeLists\\.txt\\|\\.cmake\\)\\'" . cmake-ts-mode)))
 
-  (setq treesit-language-source-alist
-        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-          (c "https://github.com/tree-sitter/tree-sitter-c")
-          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
-          (cmake "https://github.com/uyha/tree-sitter-cmake")
-          (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
-          (css "https://github.com/tree-sitter/tree-sitter-css")
-          (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-          (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-          (go "https://github.com/tree-sitter/tree-sitter-go")
-          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-          (heex "https://github.com/phoenixframework/tree-sitter-heex")
-          (html "https://github.com/tree-sitter/tree-sitter-html")
-          (java "https://github.com/tree-sitter/tree-sitter-java")
-          (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
-          (jsdoc "https://github.com/tree-sitter/tree-sitter-jsdoc")
-          (json "https://github.com/tree-sitter/tree-sitter-json")
-          (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
-          (php "https://github.com/tree-sitter/tree-sitter-php" nil "php/src")
-          (phpdoc "https://github.com/claytonrcarter/tree-sitter-phpdoc")
-          (python "https://github.com/tree-sitter/tree-sitter-python")
-          (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust")
-          (toml "https://github.com/tree-sitter-grammars/tree-sitter-toml")
-          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src")
-          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src")
-          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
+(with-eval-after-load 'cmake-ts-mode
+  (add-to-list 'treesit-language-source-alist
+               '(cmake . ("https://github.com/uyha/tree-sitter-cmake")))
+  (unless (treesit-language-available-p 'cmake)
+    (treesit-install-language-grammar 'cmake)))
 
-  ;; Add `*-ts-mode' to `auto-mode-alist'.
-  (dolist (list `((cmake      . (,(rx (or "CMakeLists.txt" ".cmake") eos) . cmake-ts-mode))
-                  (dockerfile . (,(rx "Dockerfile" eos) . dockerfile-ts-mode))
-                  (elixir     . (,(rx (or ".elixir" (seq ".ex" (opt "s")) "mix.lock") eos) . elixir-ts-mode))
-                  (go         . (,(rx ".go" eos) . go-ts-mode))
-                  (gomod      . (,(rx "/go.mod" eos) . go-mod-ts-mode))
-                  (heex       . (,(rx "." (opt (any "hl")) "eex" eos) . heex-ts-mode))
-                  (lua        . (,(rx ".lua" eos) . lua-ts-mode))
-                  (tsx        . (,(rx "." (opt (any "jt")) "sx" eos) . tsx-ts-mode))
-                  (typescript . (,(rx ".ts" eos) . typescript-ts-mode))
-                  (yaml       . (,(rx ".y" (opt "a") "ml" eos) . yaml-ts-mode))))
-    (let ((parser (car list))
-          (alist (cdr list)))
-      (when (treesit-language-available-p parser)
-        (add-to-list 'auto-mode-alist alist))))
+;;;; csharp-mode
 
-  (setq major-mode-remap-alist
-        '((c-mode          . c-ts-mode)
-          (c++-mode        . c++-ts-mode)
-          (c-or-c++-mode   . c-or-c++-ts-mode)
-          (conf-toml-mode  . toml-ts-mode)
-          (csharp-mode     . csharp-ts-mode)
-          (css-mode        . css-ts-mode)
-          (html-mode       . html-ts-mode)
-          (java-mode       . java-ts-mode)
-          (javascript-mode . js-ts-mode)
-          (js-json-mode    . json-ts-mode)
-          (js-mode         . js-ts-mode)
-          (mhtml-mode      . mhtml-ts-mode)
-          (python-mode     . python-ts-mode)
-          (ruby-mode       . ruby-ts-mode)
-          (sh-mode         . bash-ts-mode))))
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(csharp-mode . csharp-ts-mode)))
 
-(defvar my-last-compilation-buffer nil
-  "The last buffer in which compilation took place.")
+(with-eval-after-load 'csharp-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(c-sharp . ("https://github.com/tree-sitter/tree-sitter-c-sharp")))
+    (unless (treesit-language-available-p 'c-sharp)
+      (treesit-install-language-grammar 'c-sharp))))
 
-(with-eval-after-load 'compile
-  ;; Colorize output of Compilation Mode
-  ;; https://stackoverflow.com/a/3072831/355252
-  (if (>= emacs-major-version 28)
-      (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-    (progn
-      (defun my--colorize-compilation-buffer ()
-        "Colorize a compilation mode buffer."
-        (let ((inhibit-read-only t))
-          (ansi-color-apply-on-region compilation-filter-start (point))))
-      (add-hook 'compilation-filter-hook #'my--colorize-compilation-buffer)))
+;;;; dockerfile-ts-mode
 
-  ;; Save before compiling
-  (setq compilation-ask-about-save nil)
-  ;; Automatically scroll to first error
-  (setq compilation-scroll-output 'first-error)
-  ;; Kill old compile processes before starting the new one
-  (setq compilation-always-kill t))
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist
+               '("\\(?:Dockerfile\\(?:\\..*\\)?\\|\\.[Dd]ockerfile\\)\\'" . dockerfile-ts-mode)))
 
-(global-set-key (kbd "C-c c k") #'compile)
-(global-set-key (kbd "C-c c r") #'recompile)
+(with-eval-after-load 'dockerfile-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(dockerfile . ("https://github.com/camdencheek/tree-sitter-dockerfile")))
+    (unless (treesit-language-available-p 'dockerfile)
+      (treesit-install-language-grammar 'dockerfile))))
 
-(add-hook 'prog-mode-hook #'subword-mode)
-(add-hook 'text-mode-hook #'subword-mode)
-
-;; Don't ask before rereading the TAGS files if they have changed
-(setq tags-revert-without-query t)
-
-;;;; Major modes
-
-(add-to-list 'auto-mode-alist '("\\.[cm]js\\'" . js-mode))
-(with-eval-after-load 'js
-  (setq js-indent-level 2))
-
-(add-to-list 'auto-mode-alist '("\\.[cir]py\\'" . python-mode))
-(with-eval-after-load 'python
-  (setq python-indent-guess-indent-offset nil)
-  (setq python-indent-offset 4))
-
-(with-eval-after-load 'tex-mode
-  (setq tex-command "xelatex")
-  (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
-
-;;; S-expression
+;;;; elisp-mode
 
 (defun my-endless-sharp ()
   "Insert #\\=' unless in a string or comment.
@@ -1434,7 +1356,195 @@ sexp before point and insert output into current position."
                    lisp-interaction-mode-map))
   (define-key map (kbd "C-c C-p") #'my-eval-print-last-sexp))
 
-;;; Lsp
+;;;; elixir-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist
+               '("\\(?:\\.elixir\\|\\.exs?\\|mix\\.lock\\)\\'" . elixir-ts-mode)))
+
+(with-eval-after-load 'elixir-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(elixir . ("https://github.com/elixir-lang/tree-sitter-elixir")))
+    (unless (treesit-language-available-p 'elixir)
+      (treesit-install-language-grammar 'elixir))))
+
+;;;; go-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.go\\'" . go-ts-mode))
+  (add-to-list 'auto-mode-alist '("/go\\.mod\\'" . go-mod-ts-mode)))
+
+(with-eval-after-load 'go-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(go . ("https://github.com/tree-sitter/tree-sitter-go")))
+    (unless (treesit-language-available-p 'go)
+      (treesit-install-language-grammar 'go))
+
+    (add-to-list 'treesit-language-source-alist
+                 '(gomod . ("https://github.com/camdencheek/tree-sitter-go-mod")))
+    (unless (treesit-language-available-p 'gomod)
+      (treesit-install-language-grammar 'gomod))))
+
+;;;; heex-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.[hl]?eex\\'" . heex-ts-mode)))
+
+(with-eval-after-load 'heex-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(heex . ("https://github.com/phoenixframework/tree-sitter-heex")))
+    (unless (treesit-language-available-p 'heex)
+      (treesit-install-language-grammar 'heex))))
+
+;;;; java-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.java\\'" . java-ts-mode)))
+
+(with-eval-after-load 'java-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(java . ("https://github.com/tree-sitter/tree-sitter-java")))
+    (unless (treesit-language-available-p 'java)
+      (treesit-install-language-grammar 'java))))
+
+;;;; js
+
+(add-to-list 'auto-mode-alist '("\\.[cm]js\\'" . js-mode))
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode)))
+
+(with-eval-after-load 'js
+  (setq js-indent-level 2)
+
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(javascript . ("https://github.com/tree-sitter/tree-sitter-javascript")))
+    (unless (treesit-language-available-p 'javascript)
+      (treesit-install-language-grammar 'javascript))
+
+    (add-to-list 'treesit-language-source-alist
+                 '(jsdoc . ("https://github.com/tree-sitter/tree-sitter-jsdoc")))
+    (unless (treesit-language-available-p 'jsdoc)
+      (treesit-install-language-grammar 'jsdoc))))
+
+;;;; json-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.json\\'" . json-ts-mode)))
+
+(with-eval-after-load 'json-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(json . ("https://github.com/tree-sitter/tree-sitter-json")))
+    (unless (treesit-language-available-p 'json)
+      (treesit-install-language-grammar 'json))))
+
+;;;; lua-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
+  (add-to-list 'interpreter-mode-alist '("\\<lua\\(?:jit\\)?" . lua-ts-mode)))
+
+(with-eval-after-load 'lua-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(lua . ("https://github.com/tree-sitter-grammars/tree-sitter-lua")))
+    (unless (treesit-language-available-p 'lua)
+      (treesit-install-language-grammar 'lua))))
+
+;;;; php-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist
+               '("\\(?:\\.\\(?:php[s345]?\\|phtml\\|inc\\|stub\\)\\|/\\.php_cs\\(?:\\.dist\\)?\\)\\'" . php-ts-mode))
+  (add-to-list 'interpreter-mode-alist
+               '("php\\(?:-?[34578]\\(?:\\.[0-9]+\\)*\\)?" . php-ts-mode)))
+
+(with-eval-after-load 'php-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(php . ("https://github.com/tree-sitter/tree-sitter-php" nil "php/src")))
+    (unless (treesit-language-available-p 'php)
+      (treesit-install-language-grammar 'php))
+
+    (add-to-list 'treesit-language-source-alist
+                 '(phpdoc . ("https://github.com/claytonrcarter/tree-sitter-phpdoc")))
+    (unless (treesit-language-available-p 'phpdoc)
+      (treesit-install-language-grammar 'phpdoc))))
+
+;;;; python
+
+(add-to-list 'auto-mode-alist '("\\.[cir]py\\'" . python-mode))
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode)))
+
+(with-eval-after-load 'python
+  (setq python-indent-guess-indent-offset nil)
+  (setq python-indent-offset 4)
+
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(python . ("https://github.com/tree-sitter/tree-sitter-python")))
+    (unless (treesit-language-available-p 'python)
+      (treesit-install-language-grammar 'python))))
+
+;;;; ruby-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
+  (add-to-list 'auto-mode-alist
+               '("\\(?:\\.\\(?:rbw?\\|ru\\|rake\\|thor\\|axlsx\\|jbuilder\\|rabl\\|gemspec\\|podspec\\)\\|/\\(?:Gem\\|Rake\\|Cap\\|Thor\\|Puppet\\|Berks\\|Brew\\|Fast\\|Vagrant\\|Guard\\|Pod\\)file\\)\\'" . ruby-ts-mode)))
+
+(with-eval-after-load 'ruby-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(ruby . ("https://github.com/tree-sitter/tree-sitter-ruby")))
+    (unless (treesit-language-available-p 'ruby)
+      (treesit-install-language-grammar 'ruby))))
+
+;;;; rust-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.rs\\'" . rust-ts-mode)))
+
+(with-eval-after-load 'rust-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(rust . ("https://github.com/tree-sitter/tree-sitter-rust")))
+    (unless (treesit-language-available-p 'rust)
+      (treesit-install-language-grammar 'rust))))
+
+;;;; tex-mode
+
+(with-eval-after-load 'tex-mode
+  (setq tex-command "xelatex")
+  (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
+
+;;;; typescript-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.[jt]sx\\'" . tsx-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode)))
+
+(with-eval-after-load 'typescript-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src")))
+    (unless (treesit-language-available-p 'tsx)
+      (treesit-install-language-grammar 'tsx))
+
+    (add-to-list 'treesit-language-source-alist
+                 '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src")))
+    (unless (treesit-language-available-p 'typescript)
+      (treesit-install-language-grammar 'typescript))))
+
+;;;; Lsp
 
 (when (fboundp 'eglot)
   (global-set-key (kbd "C-c l l") #'eglot)
@@ -1456,7 +1566,34 @@ sexp before point and insert output into current position."
     (global-set-key (kbd "C-c l R") #'eglot-reconnect)
     (global-set-key (kbd "C-c l Q") #'eglot-shutdown-all)))
 
-;;; Check
+;;;; Compile
+
+(defvar my-last-compilation-buffer nil
+  "The last buffer in which compilation took place.")
+
+(with-eval-after-load 'compile
+  ;; Colorize output of Compilation Mode
+  ;; https://stackoverflow.com/a/3072831/355252
+  (if (>= emacs-major-version 28)
+      (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+    (progn
+      (defun my--colorize-compilation-buffer ()
+        "Colorize a compilation mode buffer."
+        (let ((inhibit-read-only t))
+          (ansi-color-apply-on-region compilation-filter-start (point))))
+      (add-hook 'compilation-filter-hook #'my--colorize-compilation-buffer)))
+
+  ;; Save before compiling
+  (setq compilation-ask-about-save nil)
+  ;; Automatically scroll to first error
+  (setq compilation-scroll-output 'first-error)
+  ;; Kill old compile processes before starting the new one
+  (setq compilation-always-kill t))
+
+(global-set-key (kbd "C-c c k") #'compile)
+(global-set-key (kbd "C-c c r") #'recompile)
+
+;;;; Vendor
 
 (with-eval-after-load 'flymake
   (global-set-key (kbd "C-c ! b") #'flymake-show-buffer-diagnostics)
@@ -1468,6 +1605,88 @@ sexp before point and insert output into current position."
     (setq ispell-extra-args '("--sug-mode=ultra"
                               "--lang=en_US"
                               "--camel-case"))))
+
+;;; Text
+
+;;;; css-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(css-mode . css-ts-mode)))
+
+(with-eval-after-load 'css-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(css . ("https://github.com/tree-sitter/tree-sitter-css")))
+    (unless (treesit-language-available-p 'css)
+      (treesit-install-language-grammar 'css))))
+
+;;;; html-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(html-mode . html-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.html\\'" . html-ts-mode)))
+
+(with-eval-after-load 'html-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(html . ("https://github.com/tree-sitter/tree-sitter-html")))
+    (unless (treesit-language-available-p 'html)
+      (treesit-install-language-grammar 'html))))
+
+;;;; toml-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'major-mode-remap-alist '(conf-toml-mode . toml-ts-mode))
+  (add-to-list 'auto-mode-alist '("\\.toml\\'" . toml-ts-mode)))
+
+(with-eval-after-load 'toml-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(toml . ("https://github.com/tree-sitter-grammars/tree-sitter-toml")))
+    (unless (treesit-language-available-p 'toml)
+      (treesit-install-language-grammar 'toml))))
+
+;;;; yaml-ts-mode
+
+(when my-treesit-available-p
+  (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode)))
+
+(with-eval-after-load 'yaml-ts-mode
+  (when my-treesit-available-p
+    (add-to-list 'treesit-language-source-alist
+                 '(yaml . ("https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
+    (unless (treesit-language-available-p 'yaml)
+      (treesit-install-language-grammar 'yaml))))
+
+;;; Version control
+
+;; Visit version controlled symlink without asking
+(setq vc-follow-symlinks t)
+
+(defun my-smerge-resolve-all (keep)
+  "Resolve all conflicts while keeping KEEP side.
+
+KEEP is one of `upper', `base', `lower'."
+  (interactive
+   (list (intern (completing-read "Keep: " '(upper base lower)))))
+  (let ((resolve-func
+         (pcase keep
+           ('upper #'smerge-keep-upper)
+           ('base  #'smerge-keep-base)
+           ('lower #'smerge-keep-lower)
+           (_ (error "Invalid keep value: %s" keep))))
+        (resolve-count 0))
+    (save-excursion
+      (goto-char (point-min))
+      (while (ignore-errors (not (smerge-next)))
+        (funcall resolve-func)
+        (cl-incf resolve-count)))
+    (if (> resolve-count 0)
+        (message "Resolved %d conflict(s) using `%s'" resolve-count keep)
+      (message "No conflicts found"))))
+
+(with-eval-after-load 'smerge-mode
+  (define-key smerge-basic-map "R" #'my-smerge-resolve-all))
 
 ;;; Functions
 
@@ -1532,8 +1751,6 @@ sexp before point and insert output into current position."
     (winner-undo)))
 
 (global-set-key (kbd "C-c w f") #'my-toggle-full-window)
-
-;;;; File.
 
 (defun my-rename-this-file (&optional arg)
   "Rename both current buffer and file.
