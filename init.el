@@ -1762,11 +1762,10 @@ With a prefix ARG, rename based on current name."
     (let ((new-name (read-string
                      "New name: "
                      (when arg (file-name-nondirectory filename)))))
-      (progn
-        (when (file-exists-p filename)
-          (rename-file filename new-name +1))
-        (set-visited-file-name new-name)
-        (rename-buffer new-name)))
+      (when (file-exists-p filename)
+        (rename-file filename new-name +1))
+      (set-visited-file-name new-name)
+      (rename-buffer new-name))
     (save-buffer)))
 
 (global-set-key (kbd "C-c f r") #'my-rename-this-file)
@@ -1836,9 +1835,11 @@ With a prefix ARG, rename based on current name."
 (defun my-delete-file (file)
   "Delete FILE under current working directory."
   (interactive "sFile name: ")
-  (shell-command
-   (format "find . -depth -name %s -print0 | xargs -0 rm" file))
-  (message "`%s' under current working directory deleted." file))
+  (let ((count 0))
+    (dolist (f (directory-files-recursively default-directory (regexp-quote file)))
+      (delete-file f)
+      (cl-incf count))
+    (message "%d file(s) matching `%s' deleted." count file)))
 
 (global-set-key (kbd "C-c f D") #'my-delete-file)
 
@@ -2037,7 +2038,7 @@ URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
       (progn
         (mapc #'disable-theme custom-enabled-themes)
         (load-theme (intern x) t))
-    (error "Problem loading theme %s" x)))
+    (message "Problem loading theme %s" x)))
 
 (global-set-key (kbd "C-c m t") #'my-load-theme)
 
