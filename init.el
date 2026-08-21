@@ -99,7 +99,7 @@ See also: `package-archives'."
                               ("nongnu" . "https://elpa.nongnu.org/nongnu/")
                               ("melpa"  . "https://melpa.org/packages/")))))
 
-  (setq package-vc-allow-build-commands t)
+  (setq package-vc-allow-build-commands '(reader))
   (setq package-install-upgrade-built-in t))
 
 ;;; Long tail
@@ -484,14 +484,16 @@ mouse-3: Toggle minor modes"
   ;; -----------------------------------------
   (define-advice org-time-stamp (:around (fn &rest args) insert-escaped-repeater)
     "Insert escaped repeater for org timestamp."
-    (apply fn args)
-    (when (string-match (rx "\\" (group (any "+\\-") (0+ nonl)))
-                        org-read-date-final-answer)
-      (save-excursion
-        (backward-char)
-        (insert " "
-                (string-trim-right
-                 (match-string 1 org-read-date-final-answer))))))
+    (let ((org-read-date-final-answer nil))
+      (prog1 (apply fn args)
+        (when (and (stringp org-read-date-final-answer)
+                   (string-match (rx "\\" (group (any "+\\-") (0+ nonl)))
+                                 org-read-date-final-answer))
+          (save-excursion
+            (backward-char)
+            (insert " "
+                    (string-trim-right
+                     (match-string 1 org-read-date-final-answer))))))))
 
 ;;;; Org preview
   ;; Preview LaTeX in Org.
@@ -539,30 +541,70 @@ mouse-3: Toggle minor modes"
   ;; Use center or right, anything else means left-justified as the default.
   (plist-put org-format-latex-options :justify 'right)
 
-  (defun my--org-justify-fragment-overlay-h (beg end)
+  (defvar-local my--org-equation-number-cache nil
+    "Cached equation numbers as (BUFFER-TICK . NUMBERS).")
+
+  (defun my--org-equation-numbers ()
+    "Return an alist mapping LaTeX environment positions to equation numbers."
+    (let ((tick (buffer-chars-modified-tick)))
+      (if (eql tick (car-safe my--org-equation-number-cache))
+          (cdr my--org-equation-number-cache)
+        (let ((counter -1))
+          (setq my--org-equation-number-cache
+                (cons
+                 tick
+                 (org-element-map
+                     (org-element-parse-buffer) 'latex-environment
+                   (lambda (environment)
+                     (let ((begin (org-element-property :begin environment))
+                           (value (org-element-property :value environment)))
+                       (cons
+                        begin
+                        (cond
+                         ((and (string-match-p (rx "\\begin{equation}") value)
+                               (not (string-match-p (rx "\\tag{") value)))
+                          (cl-incf counter)
+                          counter)
+                         ((string-match-p (rx "\\begin{align}") value)
+                          (cl-incf counter)
+                          (prog1 counter
+                            (with-temp-buffer
+                              (insert value)
+                              (goto-char (point-min))
+                              ;; `\\' is used for a new line.
+                              ;; Each one leads to a number.
+                              (cl-incf counter (count-matches (rx "\\\\" line-end)))
+                              ;; Unless there are nonumbers.
+                              (goto-char (point-min))
+                              (cl-decf counter
+                                       (count-matches (rx "\\nonumber")))
+                              (goto-char (point-min))
+                              (cl-decf counter
+                                       (count-matches (rx "\\notag"))))))
+                         (t nil)))))))
+          (cdr my--org-equation-number-cache)))))
+
+  (defun my--org-justify-fragment-overlay-h (beg end &rest _)
     "Adjust the justification of a LaTeX fragment horizontally.
 The justification is set by :justify in `org-format-latex-options'.
 Only equations at the beginning of a line are justified.
 
 URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview-fragments-in-org-mode/'."
-    (let* ((position (plist-get org-format-latex-options :justify))
-           (ov (car (overlays-at (/ (+ beg end) 2) t)))
-           (width (car (image-size (overlay-get ov 'display))))
-           offset)
-      (cond
-       ((and (eq 'center position)
-             (= beg (line-beginning-position)))
-        (setq offset (floor (- (/ fill-column 2)
-                               (/ width 2))))
-        (when (< offset 0)
-          (setq offset 0))
-        (overlay-put ov 'before-string (make-string offset #x20)))
-       ((and (eq 'right position)
-             (= beg (line-beginning-position)))
-        (setq offset (floor (- fill-column width)))
-        (when (< offset 0)
-          (setq offset 0))
-        (overlay-put ov 'before-string (make-string offset #x20))))))
+    (when-let* ((position (plist-get org-format-latex-options :justify))
+                (overlay (my--org-preview-overlay-at beg end))
+                (display (overlay-get overlay 'display))
+                (width (car (image-size display)))
+                (at-line-beginning
+                 (= beg (save-excursion
+                          (goto-char beg)
+                          (line-beginning-position))))
+                (offset
+                 (pcase position
+                   ('center (floor (- (/ fill-column 2) (/ width 2))))
+                   ('right (floor (- fill-column width))))))
+      (when at-line-beginning
+        (overlay-put overlay 'before-string
+                     (make-string (max 0 offset) #x20)))))
 
   (advice-add 'org--make-preview-overlay
               :after #'my--org-justify-fragment-overlay-h)
@@ -577,12 +619,22 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview
       (advice-add 'org--make-preview-overlay
                   :after #'my--org-justify-fragment-overlay-h)))
 
-  (defun my--org-justify-fragment-overlay-v (beg end)
+  (defun my--org-preview-overlay-at (beg end)
+    "Return the Org LaTeX preview overlay between BEG and END."
+    (seq-find (lambda (overlay)
+                (eq (overlay-get overlay 'org-overlay-type)
+                    'org-latex-overlay))
+              (overlays-at (/ (+ beg end) 2) t)))
+
+  (defun my--org-justify-fragment-overlay-v (beg end &rest _)
     "Adjust the justification of a LaTeX fragment vertically."
-    (let* ((ov (car (overlays-at (/ (+ beg end) 2) t)))
-           (img (cdr (overlay-get ov 'display)))
-           (new-img (plist-put img :ascent 95)))
-      (overlay-put ov 'display (cons 'image new-img))))
+    (when-let* ((overlay (my--org-preview-overlay-at beg end))
+                (display (overlay-get overlay 'display))
+                ((eq (car-safe display) 'image)))
+      (overlay-put overlay 'display
+                   (cons 'image
+                         (plist-put (copy-sequence (cdr display))
+                                    :ascent 95)))))
 
   (defun my-org-toggle-justify-fragment-overlay-v ()
     "Toggle justify LaTeX fragment vertically."
@@ -598,40 +650,9 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview
     "Number equations in LaTeX fragment.
 
 URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numbering-in-LaTeX-fragments-in-org-mode/'."
-    (let ((counter -1)
-          equation-number
-          results)
-      (setq results (cl-loop for (begin . env)
-                             in (org-element-map (org-element-parse-buffer) 'latex-environment
-                                  (lambda (env)
-                                    (cons (org-element-property :begin env)
-                                          (org-element-property :value env))))
-                             collect (cond
-                                      ((and (string-match "\\\\begin{equation}" env)
-                                            (not (string-match "\\\\tag{" env)))
-                                       (cl-incf counter)
-                                       (cons begin counter))
-                                      ((and (string-match "\\\\begin{align}" env)
-                                            (string-match "\\\\notag" env))
-                                       (cl-incf counter)
-                                       (cons begin counter))
-                                      ((string-match "\\\\begin{align}" env)
-                                       (prog2
-                                           (cl-incf counter)
-                                           (cons begin counter)
-                                         (with-temp-buffer
-                                           (insert env)
-                                           (goto-char (point-min))
-                                           ;; `\\' is used for a new line.
-                                           ;; Each one leads to a number.
-                                           (cl-incf counter (count-matches "\\\\$"))
-                                           ;; Unless there are nonumbers.
-                                           (goto-char (point-min))
-                                           (cl-decf counter
-                                                    (count-matches "\\nonumber")))))
-                                      (t
-                                       (cons begin nil)))))
-      (when (setq equation-number (cdr (assoc (point) results)))
+    (let ((equation-number
+           (cdr (assq (point) (my--org-equation-numbers)))))
+      (when equation-number
         (setf (car args)
               (concat
                (format "\\setcounter{equation}{%s}\n" equation-number)
@@ -662,16 +683,18 @@ URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numberin
   ;; and B has an entering action. A's leaving action won't be triggered
   ;; instead of executing B's entering action.
 
-  (setq org-todo-keywords
-        '((sequence "TODO(t)" "STARTED(s!/!)" "HANGUP(h@)"
+(setq org-todo-keywords
+       '((sequence "TODO(t)" "STARTED(s!/!)" "HANGUP(h@)"
                     "|"
                     "DONE(d)" "ABORT(a@/!)")
-          (sequence "REPORT(r)" "BUG(b@)" "KNOWNCAUSE(k@)"
-                    "|"
-                    "FIXED(f!)")
-          (sequence "WAITING(w@/!)" "SOMEDAY(S@)" "PROJECT(P@)"
-                    "|"
-                    "CANCELLED(c@/!)"))))
+         (sequence "REPORT(r)" "BUG(b@)" "KNOWNCAUSE(k@)"
+                  "|"
+                  "FIXED(f!)")
+         (sequence "WAITING(w@/!)" "SOMEDAY(S@)" "PROJECT(P@)"
+                  "|"
+                  "CANCELLED(c@/!)"))))
+
+)
 
 ;;;; Org-babel
 (with-eval-after-load 'ob
@@ -691,15 +714,20 @@ Adapt from `org-babel-remove-result'."
 
   (add-hook 'org-babel-after-execute-hook #'my-org-babel-highlight-result)
 
-  (define-advice org-babel-execute-src-block (:around (fn &rest args) lazy-load-languages)
+  (define-advice org-babel-execute-src-block
+      (:around (fn &optional arg info params executor-type) lazy-load-languages)
     "Load languages when needed."
-    (let* ((language (org-element-property :language (org-element-at-point)))
-           (lang-cons (assoc (intern language) org-babel-load-languages)))
-      (unless (cdr lang-cons)
-        (add-to-list 'org-babel-load-languages (cons (intern language) t))
+    (let* ((info (or info (org-babel-get-src-block-info)))
+           (language (car info))
+           (language-symbol (and language (intern language)))
+           (lang-cons (assq language-symbol org-babel-load-languages)))
+      (when (and language-symbol (not (cdr lang-cons)))
+        (add-to-list 'org-babel-load-languages (cons language-symbol t))
         (org-babel-do-load-languages 'org-babel-load-languages
-                                     org-babel-load-languages)))
-    (apply fn args)))
+                                     org-babel-load-languages))
+      (funcall fn arg info params executor-type)))
+
+  )
 
 ;;;; Org-archive
 (with-eval-after-load 'org-archive
@@ -1072,11 +1100,18 @@ ATTRS."
 ;; Make dired "guess" target directory.
 (setq dired-dwim-target t)
 
+(defun my--ediff-restore-window-configuration (configuration)
+  "Restore window CONFIGURATION after the current Ediff session."
+  (add-hook 'ediff-after-quit-hook-internal
+            (lambda () (set-window-configuration configuration))
+            nil t))
+
 (defun my-ediff-files ()
   "Run Ediff on the two marked files.
 
 URL `https://oremacs.com/2017/03/18/dired-ediff/'."
   (interactive)
+  (require 'dired-aux)
   (let ((files (dired-get-marked-files))
         (wnd (current-window-configuration)))
     (cond
@@ -1084,32 +1119,35 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
       (let ((file1 (car files))
             (file2 (if (cdr files)
                        (cadr files)
-                     (read-file-name
-                      "File: "
-                      (dired-dwim-target-directory)))))
-        (if (file-newer-than-file-p file1 file2)
-            (ediff-files file2 file1)
-          (ediff-files file1 file2))
-        (add-hook 'ediff-after-quit-hook-internal
-                  (lambda ()
-                    (setq ediff-after-quit-hook-internal nil)
-                    (set-window-configuration wnd)))))
+                       (read-file-name
+                        "File: "
+                        (dired-dwim-target-directory))))
+             (startup-hooks
+             (list (apply-partially
+                    #'my--ediff-restore-window-configuration
+                    wnd))))
+		(if (file-newer-than-file-p file1 file2)
+		    (ediff-files file2 file1 startup-hooks)
+		  (ediff-files file1 file2 startup-hooks))))
      (t
       (user-error "Mark more than 2 files")))))
 
 (defun my-dired-cycle-space-underscore-hyphen ()
   "Cycle marked files name between space, hyphen and underscore."
   (interactive)
-  (mapc (lambda (x)
-          (let ((x (file-name-nondirectory x)))
+  (dolist (file (dired-get-marked-files))
+    (let* ((directory (file-name-directory file))
+           (name (file-name-nondirectory file))
+           (new-name
             (cond
-             ((string-match " " x)
-              (rename-file x (replace-regexp-in-string " " "-" x)))
-             ((string-match "-" x)
-              (rename-file x (replace-regexp-in-string "-" "_" x)))
-             ((string-match "_" x)
-              (rename-file x (replace-regexp-in-string "_" " " x))))))
-        (dired-get-marked-files))
+             ((string-match-p " " name)
+              (replace-regexp-in-string " " "-" name))
+             ((string-match-p "-" name)
+              (replace-regexp-in-string "-" "_" name))
+             ((string-match-p "_" name)
+              (replace-regexp-in-string "_" " " name)))))
+      (when new-name
+        (rename-file file (expand-file-name new-name directory)))))
   (revert-buffer))
 
 (defun my-dired-open-externally (&optional arg)
@@ -1787,11 +1825,11 @@ With a prefix ARG, rename based on current name."
 (defun my-browse-this-file ()
   "Open current file as a URL using `browse-url'."
   (interactive)
-  (let ((file-name (buffer-file-name)))
-    (if (and (fboundp 'tramp-tramp-file-p)
-             (tramp-tramp-file-p file-name))
-        (user-error "Cannot open tramp file")
-      (browse-url (concat "file://" file-name)))))
+  (if-let* ((file-name (buffer-file-name)))
+      (if (file-remote-p file-name)
+          (user-error "Cannot open remote file")
+        (browse-url-of-file file-name))
+    (user-error "Current buffer is not visiting a file")))
 
 (global-set-key (kbd "C-c f b") #'my-browse-this-file)
 
@@ -1833,13 +1871,16 @@ With a prefix ARG, rename based on current name."
 (global-set-key (kbd "C-c f d") #'my-delete-this-file)
 
 (defun my-delete-file (file)
-  "Delete FILE under current working directory."
+  "Recursively delete files named FILE under `default-directory'."
   (interactive "sFile name: ")
   (let ((count 0))
-    (dolist (f (directory-files-recursively default-directory (regexp-quote file)))
-      (delete-file f)
+    (dolist (path
+             (directory-files-recursively
+              default-directory
+              (concat "\\`" (regexp-quote file) "\\'")))
+      (delete-file path)
       (cl-incf count))
-    (message "%d file(s) matching `%s' deleted." count file)))
+    (message "%d file(s) named `%s' deleted." count file)))
 
 (global-set-key (kbd "C-c f D") #'my-delete-file)
 
@@ -2034,11 +2075,17 @@ URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
                 (completing-read
                  "Choose a theme: "
                  (mapcar #'symbol-name (custom-available-themes)))))
-  (condition-case _
-      (progn
-        (mapc #'disable-theme custom-enabled-themes)
-        (load-theme (intern x) t))
-    (message "Problem loading theme %s" x)))
+  (let ((enabled-themes (copy-sequence custom-enabled-themes)))
+    (condition-case err
+        (progn
+          (mapc #'disable-theme custom-enabled-themes)
+          (load-theme (intern x) t))
+       (error
+       (mapc #'disable-theme custom-enabled-themes)
+       (mapc (lambda (theme) (load-theme theme t))
+              (reverse enabled-themes))
+       (message "Problem loading theme %s: %s"
+                x (error-message-string err))))))
 
 (global-set-key (kbd "C-c m t") #'my-load-theme)
 
