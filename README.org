@@ -68,6 +68,9 @@ This *Why Emacs* section credits to [[https://github.com/remacs/remacs][Remacs]]
 
 This configuration is about vanilla Emacs.
 
+It requires GNU Emacs 29.1 or newer and uses only built-in Emacs Lisp
+packages.
+
 * Install
 
 Clone this repository to either =~/.emacs.d= or for testing purposes

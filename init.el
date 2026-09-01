@@ -1,11 +1,11 @@
 ;;; init.el --- `user-init-file' -*- lexical-binding: t; -*-
 
+(when (version< emacs-version "29.1")
+  (error "This configuration requires Emacs 29.1 or newer"))
+
 (progn                                  ; startup
   (setq user-init-file (or load-file-name buffer-file-name))
   (setq user-emacs-directory (file-name-directory user-init-file))
-
-  (when (< emacs-major-version 27)
-    (load (expand-file-name "early-init.el" user-emacs-directory)))
 
   (setq inhibit-startup-buffer-menu t)
   (setq inhibit-startup-screen t)
@@ -56,6 +56,38 @@
 ;;; Package
 
 (with-eval-after-load 'package
+  (defconst my-package-archive-source-alist
+    '((official
+       ("gnu"    . "https://elpa.gnu.org/packages/")
+       ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+       ("melpa"  . "https://melpa.org/packages/"))
+      (emacs-china
+       ("gnu"    . "https://elpa.emacs-china.org/gnu/")
+       ("nongnu" . "https://elpa.emacs-china.org/nongnu/")
+       ("melpa"  . "https://elpa.emacs-china.org/melpa/"))
+      (163
+       ("gnu"    . "https://mirrors.163.com/elpa/gnu/")
+       ("nongnu" . "https://mirrors.163.com/elpa/nongnu/")
+       ("melpa"  . "https://mirrors.163.com/elpa/melpa/"))
+      (tuna
+       ("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+       ("nongnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/nongnu/")
+       ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
+    "ELPA archives provided by each package archive source.")
+
+  (defun my--set-package-archive-source (symbol value)
+    "Set SYMBOL to package archive source VALUE."
+    (let ((archives (alist-get value my-package-archive-source-alist)))
+      (unless archives
+        (setq value 'official
+              archives (alist-get value my-package-archive-source-alist)))
+      (set-default symbol value)
+      (setq package-archives
+            (mapcar (lambda (archive)
+                      (cons (copy-sequence (car archive))
+                            (copy-sequence (cdr archive))))
+                    archives))))
+
   (defcustom my-package-archive-source 'official
     "ELPA source for package installation.
 
@@ -71,36 +103,22 @@ See also: `package-archives'."
             (const :tag "tuna"        tuna)
             (const :tag "163"         163)
             (const :tag "emacs-china" emacs-china))
+    :set #'my--set-package-archive-source
     :group 'convenience)
 
-  (setq package-archives (pcase my-package-archive-source
-                           ('official
-                            '(("gnu"    . "https://elpa.gnu.org/packages/")
-                              ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-                              ("melpa"  . "https://melpa.org/packages/")))
-
-                           ('emacs-china
-                            '(("gnu"    . "https://elpa.emacs-china.org/gnu/")
-                              ("nongnu" . "https://elpa.emacs-china.org/nongnu/")
-                              ("melpa"  . "https://elpa.emacs-china.org/melpa/")))
-
-                           ('163
-                            '(("gnu"    . "https://mirrors.163.com/elpa/gnu/")
-                              ("nongnu" . "https://mirrors.163.com/elpa/nongnu/")
-                              ("melpa"  . "https://mirrors.163.com/elpa/melpa/")))
-
-                           ('tuna
-                            '(("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
-                              ("nongnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/nongnu/")
-                              ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
-
-                           (_               ; Default using official source
-                            '(("gnu"    . "https://elpa.gnu.org/packages/")
-                              ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-                              ("melpa"  . "https://melpa.org/packages/")))))
-
-  (setq package-vc-allow-build-commands '(reader))
   (setq package-install-upgrade-built-in t))
+
+(with-eval-after-load 'package-vc
+  (set (if (boundp 'package-vc-allow-build-commands)
+           'package-vc-allow-build-commands
+         'package-vc-allow-side-effects)
+       '(reader)))
+
+(defun my--treesit-ensure-grammar (language source)
+  "Register SOURCE and install its tree-sitter grammar for LANGUAGE."
+  (setf (alist-get language treesit-language-source-alist) source)
+  (unless (treesit-language-available-p language)
+    (treesit-install-language-grammar language)))
 
 ;;; Long tail
 
@@ -117,6 +135,9 @@ See also: `package-archives'."
 (setq scroll-margin 0)
 (setq scroll-conservatively 100000)
 (setq scroll-preserve-screen-position 1)
+
+;; Respect kinsoku rules when wrapping CJK text visually.
+(setq word-wrap-by-category t)
 
 ;; Repeating C-SPC after popping mark pops it again
 (setq set-mark-command-repeat-pop t)
@@ -168,6 +189,9 @@ See also: `package-archives'."
 ;; Sub-word
 (global-subword-mode +1)
 
+;; Enable repeatable commands and keymaps.
+(repeat-mode +1)
+
 ;; Show matching parentheses
 (show-paren-mode +1)
 (setq show-paren-context-when-offscreen 'overlay)
@@ -181,6 +205,7 @@ See also: `package-archives'."
 
 ;; Clean up obsolete buffers automatically
 (require 'midnight)
+(midnight-mode +1)
 
 ;; Undo (and redo) changes about the window
 (require 'winner)
@@ -288,11 +313,8 @@ called from `delete-indentation'."
                    (insert ?\s))))))
     (apply fn args)))
 
-(if (>= emacs-major-version 27)
-    (with-eval-after-load 'epg
-      (setq epg-pinentry-mode 'loopback))
-  (with-eval-after-load 'epa
-    (setq epa-pinentry-mode 'loopback)))
+(with-eval-after-load 'epg
+  (setq epg-pinentry-mode 'loopback))
 
 (with-eval-after-load 'fortune
   (setq fortune-dir "~/fortunes/")
@@ -449,9 +471,6 @@ mouse-3: Toggle minor modes"
   (setq org-src-fontify-natively t)
 
   (setq org-edit-src-content-indentation 0)
-
-  ;; Make Emacs respect kinsoku rules when wrapping lines visually.
-  (setq word-wrap-by-category t)
 
   ;; Save state changes in the LOGBOOK drawer.
   (setq org-log-into-drawer t)
@@ -841,7 +860,7 @@ Adapt from `org-babel-remove-result'."
 
 ;;; GUI
 
-(when (display-graphic-p)
+(when (or (display-graphic-p) (daemonp))
 
 ;;;; Frame
 
@@ -1000,27 +1019,6 @@ If FONT-NAME is nil, use the first font in `my-font-alist'."
     (or (alist-get font-name my-font-alist nil nil #'equal)
         (cdar my-font-alist)))
 
-  (defun my--load-font-spec (face font-name size &rest attrs)
-    "Load FONT-SPEC for FACE.
-
-FONT-SPEC should be a list (ASCII-FAMILY CJK-FAMILY CJK-SCALE
-ASCII-SPEC CJK-SPEC), where ASCII-FAMILY is a ASCII font family,
-CJK-FAMILY is the CJK font family, and SCJK-SCALE is the scale
-factor of CJK font.  ASCII-SPEC and CJK-SPEC are extra spec for
-ASCII and CJK."
-    (if (eq face 'default)
-        (apply #'my-load-default-font font-name size attrs)
-      (let ((fontset
-             (apply #'my--create-fontset
-                    (my--font-expand-spec
-                     (my--font-name-to-spec font-name) size))))
-        (apply #'set-face-attribute face nil
-               ;; We must set both `:font' and `fontset' for both ASCII
-               ;; and non-ascii spec to take effect.
-               :font fontset
-               :fontset fontset
-               attrs))))
-
   (defun my-load-default-font (font-name size &rest attrs)
     "Load FONT-NAME for default face with SIZE and ATTRS.
 
@@ -1068,6 +1066,7 @@ ATTRS."
 
   (global-set-key (kbd "C-c m F") #'my-load-font)
 
+  ;; Fonts are global defaults and are inherited by newly created frames.
   (my-load-default-font nil my-font-size)
 
   ;; Emoji display.
@@ -1307,15 +1306,9 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
 
 (with-eval-after-load 'c-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(c . ("https://github.com/tree-sitter/tree-sitter-c")))
-    (unless (treesit-language-available-p 'c)
-      (treesit-install-language-grammar 'c))
+    (my--treesit-ensure-grammar 'c '("https://github.com/tree-sitter/tree-sitter-c"))
 
-    (add-to-list 'treesit-language-source-alist
-                 '(cpp . ("https://github.com/tree-sitter/tree-sitter-cpp")))
-    (unless (treesit-language-available-p 'cpp)
-      (treesit-install-language-grammar 'cpp))))
+    (my--treesit-ensure-grammar 'cpp '("https://github.com/tree-sitter/tree-sitter-cpp"))))
 
 ;;;; cmake-ts-mode
 
@@ -1324,10 +1317,7 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
                '("\\(?:CMakeLists\\.txt\\|\\.cmake\\)\\'" . cmake-ts-mode)))
 
 (with-eval-after-load 'cmake-ts-mode
-  (add-to-list 'treesit-language-source-alist
-               '(cmake . ("https://github.com/uyha/tree-sitter-cmake")))
-  (unless (treesit-language-available-p 'cmake)
-    (treesit-install-language-grammar 'cmake)))
+  (my--treesit-ensure-grammar 'cmake '("https://github.com/uyha/tree-sitter-cmake")))
 
 ;;;; csharp-mode
 
@@ -1336,10 +1326,7 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
 
 (with-eval-after-load 'csharp-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(c-sharp . ("https://github.com/tree-sitter/tree-sitter-c-sharp")))
-    (unless (treesit-language-available-p 'c-sharp)
-      (treesit-install-language-grammar 'c-sharp))))
+    (my--treesit-ensure-grammar 'c-sharp '("https://github.com/tree-sitter/tree-sitter-c-sharp"))))
 
 ;;;; dockerfile-ts-mode
 
@@ -1349,10 +1336,7 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
 
 (with-eval-after-load 'dockerfile-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(dockerfile . ("https://github.com/camdencheek/tree-sitter-dockerfile")))
-    (unless (treesit-language-available-p 'dockerfile)
-      (treesit-install-language-grammar 'dockerfile))))
+    (my--treesit-ensure-grammar 'dockerfile '("https://github.com/camdencheek/tree-sitter-dockerfile"))))
 
 ;;;; elisp-mode
 
@@ -1402,10 +1386,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'elixir-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(elixir . ("https://github.com/elixir-lang/tree-sitter-elixir")))
-    (unless (treesit-language-available-p 'elixir)
-      (treesit-install-language-grammar 'elixir))))
+    (my--treesit-ensure-grammar 'elixir '("https://github.com/elixir-lang/tree-sitter-elixir"))))
 
 ;;;; go-ts-mode
 
@@ -1415,15 +1396,9 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'go-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(go . ("https://github.com/tree-sitter/tree-sitter-go")))
-    (unless (treesit-language-available-p 'go)
-      (treesit-install-language-grammar 'go))
+    (my--treesit-ensure-grammar 'go '("https://github.com/tree-sitter/tree-sitter-go"))
 
-    (add-to-list 'treesit-language-source-alist
-                 '(gomod . ("https://github.com/camdencheek/tree-sitter-go-mod")))
-    (unless (treesit-language-available-p 'gomod)
-      (treesit-install-language-grammar 'gomod))))
+    (my--treesit-ensure-grammar 'gomod '("https://github.com/camdencheek/tree-sitter-go-mod"))))
 
 ;;;; heex-ts-mode
 
@@ -1432,10 +1407,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'heex-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(heex . ("https://github.com/phoenixframework/tree-sitter-heex")))
-    (unless (treesit-language-available-p 'heex)
-      (treesit-install-language-grammar 'heex))))
+    (my--treesit-ensure-grammar 'heex '("https://github.com/phoenixframework/tree-sitter-heex"))))
 
 ;;;; java-ts-mode
 
@@ -1445,10 +1417,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'java-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(java . ("https://github.com/tree-sitter/tree-sitter-java")))
-    (unless (treesit-language-available-p 'java)
-      (treesit-install-language-grammar 'java))))
+    (my--treesit-ensure-grammar 'java '("https://github.com/tree-sitter/tree-sitter-java"))))
 
 ;;;; js
 
@@ -1460,15 +1429,9 @@ sexp before point and insert output into current position."
   (setq js-indent-level 2)
 
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(javascript . ("https://github.com/tree-sitter/tree-sitter-javascript")))
-    (unless (treesit-language-available-p 'javascript)
-      (treesit-install-language-grammar 'javascript))
+    (my--treesit-ensure-grammar 'javascript '("https://github.com/tree-sitter/tree-sitter-javascript"))
 
-    (add-to-list 'treesit-language-source-alist
-                 '(jsdoc . ("https://github.com/tree-sitter/tree-sitter-jsdoc")))
-    (unless (treesit-language-available-p 'jsdoc)
-      (treesit-install-language-grammar 'jsdoc))))
+    (my--treesit-ensure-grammar 'jsdoc '("https://github.com/tree-sitter/tree-sitter-jsdoc"))))
 
 ;;;; json-ts-mode
 
@@ -1478,10 +1441,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'json-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(json . ("https://github.com/tree-sitter/tree-sitter-json")))
-    (unless (treesit-language-available-p 'json)
-      (treesit-install-language-grammar 'json))))
+    (my--treesit-ensure-grammar 'json '("https://github.com/tree-sitter/tree-sitter-json"))))
 
 ;;;; lua-ts-mode
 
@@ -1491,10 +1451,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'lua-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(lua . ("https://github.com/tree-sitter-grammars/tree-sitter-lua")))
-    (unless (treesit-language-available-p 'lua)
-      (treesit-install-language-grammar 'lua))))
+    (my--treesit-ensure-grammar 'lua '("https://github.com/tree-sitter-grammars/tree-sitter-lua"))))
 
 ;;;; php-ts-mode
 
@@ -1506,15 +1463,9 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'php-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(php . ("https://github.com/tree-sitter/tree-sitter-php" nil "php/src")))
-    (unless (treesit-language-available-p 'php)
-      (treesit-install-language-grammar 'php))
+    (my--treesit-ensure-grammar 'php '("https://github.com/tree-sitter/tree-sitter-php" nil "php/src"))
 
-    (add-to-list 'treesit-language-source-alist
-                 '(phpdoc . ("https://github.com/claytonrcarter/tree-sitter-phpdoc")))
-    (unless (treesit-language-available-p 'phpdoc)
-      (treesit-install-language-grammar 'phpdoc))))
+    (my--treesit-ensure-grammar 'phpdoc '("https://github.com/claytonrcarter/tree-sitter-phpdoc"))))
 
 ;;;; python
 
@@ -1527,10 +1478,7 @@ sexp before point and insert output into current position."
   (setq python-indent-offset 4)
 
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(python . ("https://github.com/tree-sitter/tree-sitter-python")))
-    (unless (treesit-language-available-p 'python)
-      (treesit-install-language-grammar 'python))))
+    (my--treesit-ensure-grammar 'python '("https://github.com/tree-sitter/tree-sitter-python"))))
 
 ;;;; ruby-ts-mode
 
@@ -1541,10 +1489,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'ruby-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(ruby . ("https://github.com/tree-sitter/tree-sitter-ruby")))
-    (unless (treesit-language-available-p 'ruby)
-      (treesit-install-language-grammar 'ruby))))
+    (my--treesit-ensure-grammar 'ruby '("https://github.com/tree-sitter/tree-sitter-ruby"))))
 
 ;;;; rust-ts-mode
 
@@ -1553,10 +1498,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'rust-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(rust . ("https://github.com/tree-sitter/tree-sitter-rust")))
-    (unless (treesit-language-available-p 'rust)
-      (treesit-install-language-grammar 'rust))))
+    (my--treesit-ensure-grammar 'rust '("https://github.com/tree-sitter/tree-sitter-rust"))))
 
 ;;;; tex-mode
 
@@ -1572,15 +1514,9 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'typescript-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src")))
-    (unless (treesit-language-available-p 'tsx)
-      (treesit-install-language-grammar 'tsx))
+    (my--treesit-ensure-grammar 'tsx '("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src"))
 
-    (add-to-list 'treesit-language-source-alist
-                 '(typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src")))
-    (unless (treesit-language-available-p 'typescript)
-      (treesit-install-language-grammar 'typescript))))
+    (my--treesit-ensure-grammar 'typescript '("https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src"))))
 
 ;;;; Lsp
 
@@ -1612,14 +1548,7 @@ sexp before point and insert output into current position."
 (with-eval-after-load 'compile
   ;; Colorize output of Compilation Mode
   ;; https://stackoverflow.com/a/3072831/355252
-  (if (>= emacs-major-version 28)
-      (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
-    (progn
-      (defun my--colorize-compilation-buffer ()
-        "Colorize a compilation mode buffer."
-        (let ((inhibit-read-only t))
-          (ansi-color-apply-on-region compilation-filter-start (point))))
-      (add-hook 'compilation-filter-hook #'my--colorize-compilation-buffer)))
+  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
 
   ;; Save before compiling
   (setq compilation-ask-about-save nil)
@@ -1653,10 +1582,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'css-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(css . ("https://github.com/tree-sitter/tree-sitter-css")))
-    (unless (treesit-language-available-p 'css)
-      (treesit-install-language-grammar 'css))))
+    (my--treesit-ensure-grammar 'css '("https://github.com/tree-sitter/tree-sitter-css"))))
 
 ;;;; html-ts-mode
 
@@ -1666,10 +1592,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'html-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(html . ("https://github.com/tree-sitter/tree-sitter-html")))
-    (unless (treesit-language-available-p 'html)
-      (treesit-install-language-grammar 'html))))
+    (my--treesit-ensure-grammar 'html '("https://github.com/tree-sitter/tree-sitter-html"))))
 
 ;;;; toml-ts-mode
 
@@ -1679,10 +1602,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'toml-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(toml . ("https://github.com/tree-sitter-grammars/tree-sitter-toml")))
-    (unless (treesit-language-available-p 'toml)
-      (treesit-install-language-grammar 'toml))))
+    (my--treesit-ensure-grammar 'toml '("https://github.com/tree-sitter-grammars/tree-sitter-toml"))))
 
 ;;;; yaml-ts-mode
 
@@ -1691,10 +1611,7 @@ sexp before point and insert output into current position."
 
 (with-eval-after-load 'yaml-ts-mode
   (when my-treesit-available-p
-    (add-to-list 'treesit-language-source-alist
-                 '(yaml . ("https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
-    (unless (treesit-language-available-p 'yaml)
-      (treesit-install-language-grammar 'yaml))))
+    (my--treesit-ensure-grammar 'yaml '("https://github.com/tree-sitter-grammars/tree-sitter-yaml"))))
 
 ;;; Version control
 
@@ -1928,15 +1845,7 @@ With a prefix ARG, rename based on current name."
   :type 'string
   :group 'convenience)
 
-(defcustom my-socks-proxy
-  (list
-   (if (string-match-p "Microsoft" (shell-command-to-string "uname -a"))
-       (if (file-exists-p "/etc/resolv.conf")
-           (shell-command-to-string
-            "cat /etc/resolv.conf | grep nameserver | awk '{ printf $2 }'")
-         "0.0.0.0")
-     "127.0.0.1")
-   1080)
+(defcustom my-socks-proxy '("127.0.0.1" 1080)
   "SOCKS proxy."
   :type '(list (string :tag "Host")
                (integer :tag "Port"))
@@ -1992,7 +1901,7 @@ With a prefix ARG, rename based on current name."
   "Enable SOCKS proxy."
   (interactive)
   (require 'socks)
-  (let ((host (car  my-socks-proxy))
+  (let ((host (car my-socks-proxy))
         (port (cadr my-socks-proxy)))
     (setq url-gateway-method 'socks
           socks-server `("Default server" ,host ,port 5)
@@ -2372,40 +2281,6 @@ number."
                   (format "%s 平安" sym))
                 list
                 "，"))))
-
-;;; Server
-
-(defcustom my-run-emacs-as-a-server nil
-  "Non-nil means to run Emacs as a server process, which allows
-access from `emacsclient'."
-  :type 'boolean
-  :group 'convenience)
-
-(when my-run-emacs-as-a-server
-  (run-with-idle-timer 3 nil
-                       (lambda ()
-                         "Run Emacs as a server process."
-                         (require 'server)
-                         (unless (server-running-p)
-                           (message "Starting a server...")
-                           (server-start)))))
-
-;;; Site-Lisp
-
-(defun my--add-subdirs-to-load-path (parent-dir)
-  "Add every non-hidden subdir of PARENT-DIR to `load-path'."
-  (let ((default-directory parent-dir))
-    (setq load-path
-          (append
-           (cl-remove-if-not
-            #'file-directory-p
-            (directory-files (expand-file-name parent-dir) t "^[^\\.]"))
-           load-path))))
-
-;; Add both site-lisp and its immediate subdirs to `load-path'
-(let ((site-lisp-dir (expand-file-name "site-lisp" user-emacs-directory)))
-  (add-to-list 'load-path site-lisp-dir)
-  (my--add-subdirs-to-load-path site-lisp-dir))
 
 ;;; Tequila worms
 
