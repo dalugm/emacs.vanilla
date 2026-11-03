@@ -1,7 +1,17 @@
 ;;; init.el --- `user-init-file' -*- lexical-binding: t; -*-
 
-(when (version< emacs-version "29.1")
-  (error "This configuration requires Emacs 29.1 or newer"))
+(when (version< emacs-version "24.3")
+  (error "This configuration requires Emacs 24.3 or newer"))
+
+(require 'cl-lib)
+(require 'rx)
+(require 'advice)
+(require 'dired)
+(require 'pulse)
+
+(menu-bar-mode -1)
+(when (fboundp 'tool-bar-mode) (tool-bar-mode -1))
+(when (fboundp 'scroll-bar-mode) (scroll-bar-mode -1))
 
 (progn                                  ; startup
   (setq user-init-file (or load-file-name buffer-file-name))
@@ -20,25 +30,26 @@
       ;; Comment each line below first line
       "\n"
       "\n;; "
-      (if-let* ((fortune-prog (executable-find "fortune")))
-          (replace-regexp-in-string
-           ;; Remove extra escape sequences
-           (rx (or (seq ?\n eol)
-                   (seq ?\C-\[ ?\[ (0+ digit) ?m)))
-           ""
-           (shell-command-to-string fortune-prog))
-        (string-join
-         '("Now, trailblazers"
-           "Keep credos in mind"
-           "(I won't say it twice!)"
-           "One! Stop staying within the lines"
-           "Two! We always align"
-           "Three! Even if we don't gain the upper hand, we'll fight for right"
-           "Four! Never care a rap for hindsight"
-           "Five! Let us light the night"
-           "Six! Even when there are wheels within wheels, go ahead!"
-           "Get it pulverized")
-         "\n")))))
+      (let ((fortune-prog (executable-find "fortune")))
+        (if fortune-prog
+            (replace-regexp-in-string
+             ;; Remove extra escape sequences
+             (rx (or (seq ?\n eol)
+                     (seq ?\C-\[ ?\[ (0+ digit) ?m)))
+             ""
+             (shell-command-to-string fortune-prog))
+          (mapconcat #'identity
+                     '("Now, trailblazers"
+                       "Keep credos in mind"
+                       "(I won't say it twice!)"
+                       "One! Stop staying within the lines"
+                       "Two! We always align"
+                       "Three! Even if we don't gain the upper hand, we'll fight for right"
+                       "Four! Never care a rap for hindsight"
+                       "Five! Let us light the night"
+                       "Six! Even when there are wheels within wheels, go ahead!"
+                       "Get it pulverized")
+                     "\n"))))))
 
   (setq initial-scratch-message (my--initial-scratch-message))
 
@@ -49,47 +60,45 @@
  (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
  t t)
 
-(defconst my-treesit-available-p (and (fboundp 'treesit-available-p)
-                                      (treesit-available-p))
-  "Non-nil if tree-sitter support is built-in and available.")
 
 ;;; Package
 
-(with-eval-after-load 'package
-  (defconst my-package-archive-source-alist
-    '((official
-       ("gnu"    . "https://elpa.gnu.org/packages/")
-       ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-       ("melpa"  . "https://melpa.org/packages/"))
-      (emacs-china
-       ("gnu"    . "https://elpa.emacs-china.org/gnu/")
-       ("nongnu" . "https://elpa.emacs-china.org/nongnu/")
-       ("melpa"  . "https://elpa.emacs-china.org/melpa/"))
-      (163
-       ("gnu"    . "https://mirrors.163.com/elpa/gnu/")
-       ("nongnu" . "https://mirrors.163.com/elpa/nongnu/")
-       ("melpa"  . "https://mirrors.163.com/elpa/melpa/"))
-      (tuna
-       ("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
-       ("nongnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/nongnu/")
-       ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
-    "ELPA archives provided by each package archive source.")
+(eval-after-load 'package
+  '(progn
+     (defconst my-package-archive-source-alist
+       '((official
+          ("gnu"    . "https://elpa.gnu.org/packages/")
+          ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+          ("melpa"  . "https://melpa.org/packages/"))
+         (emacs-china
+          ("gnu"    . "https://elpa.emacs-china.org/gnu/")
+          ("nongnu" . "https://elpa.emacs-china.org/nongnu/")
+          ("melpa"  . "https://elpa.emacs-china.org/melpa/"))
+         (163
+          ("gnu"    . "https://mirrors.163.com/elpa/gnu/")
+          ("nongnu" . "https://mirrors.163.com/elpa/nongnu/")
+          ("melpa"  . "https://mirrors.163.com/elpa/melpa/"))
+         (tuna
+          ("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+          ("nongnu" . "https://mirrors.tuna.tsinghua.edu.cn/elpa/nongnu/")
+          ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
+       "ELPA archives provided by each package archive source.")
 
-  (defun my--set-package-archive-source (symbol value)
-    "Set SYMBOL to package archive source VALUE."
-    (let ((archives (alist-get value my-package-archive-source-alist)))
-      (unless archives
-        (setq value 'official
-              archives (alist-get value my-package-archive-source-alist)))
-      (set-default symbol value)
-      (setq package-archives
-            (mapcar (lambda (archive)
-                      (cons (copy-sequence (car archive))
-                            (copy-sequence (cdr archive))))
-                    archives))))
+     (defun my--set-package-archive-source (symbol value)
+       "Set SYMBOL to package archive source VALUE."
+       (let ((archives (cdr (assq value my-package-archive-source-alist))))
+         (unless archives
+           (setq value 'official
+                 archives (cdr (assq value my-package-archive-source-alist))))
+         (set-default symbol value)
+         (setq package-archives
+               (mapcar (lambda (archive)
+                         (cons (copy-sequence (car archive))
+                               (copy-sequence (cdr archive))))
+                       archives))))
 
-  (defcustom my-package-archive-source 'official
-    "ELPA source for package installation.
+     (defcustom my-package-archive-source 'official
+       "ELPA source for package installation.
 
 Supported values:
 `official'    - Official GNU ELPA and MELPA repositories
@@ -98,27 +107,15 @@ Supported values:
 `emacs-china' - Emacs China community mirror
 
 See also: `package-archives'."
-    :type '(choice
-            (const :tag "official"    official)
-            (const :tag "tuna"        tuna)
-            (const :tag "163"         163)
-            (const :tag "emacs-china" emacs-china))
-    :set #'my--set-package-archive-source
-    :group 'convenience)
+       :type '(choice
+               (const :tag "official"    official)
+               (const :tag "tuna"        tuna)
+               (const :tag "163"         163)
+               (const :tag "emacs-china" emacs-china))
+       :set #'my--set-package-archive-source
+       :group 'convenience)
 
-  (setq package-install-upgrade-built-in t))
-
-(with-eval-after-load 'package-vc
-  (set (if (boundp 'package-vc-allow-build-commands)
-           'package-vc-allow-build-commands
-         'package-vc-allow-side-effects)
-       '(reader)))
-
-(defun my--treesit-ensure-grammar (language source)
-  "Register SOURCE and install its tree-sitter grammar for LANGUAGE."
-  (setf (alist-get language treesit-language-source-alist) source)
-  (unless (treesit-language-available-p language)
-    (treesit-install-language-grammar language)))
+     (setq package-install-upgrade-built-in t)))
 
 ;;; Long tail
 
@@ -173,11 +170,15 @@ See also: `package-archives'."
 ;; Delete the selection with a key press
 (delete-selection-mode +1)
 
-;; Fix Emacs performance when edit so-long files
-(global-so-long-mode +1)
+;; Protect editing performance in buffers with very long lines.
+(when (fboundp 'global-so-long-mode)
+  (global-so-long-mode +1))
 
-;; https://www.emacswiki.org/emacs/SavePlace
-(save-place-mode +1)
+;; Remember the last visited position in files.
+(require 'saveplace)
+(if (fboundp 'save-place-mode)
+    (save-place-mode +1)
+  (setq-default save-place t))
 
 ;; Automatically reload files was modified by external program
 (setq auto-revert-verbose nil)
@@ -189,8 +190,9 @@ See also: `package-archives'."
 ;; Sub-word
 (global-subword-mode +1)
 
-;; Enable repeatable commands and keymaps.
-(repeat-mode +1)
+;; Enable repeatable commands when supported.
+(when (fboundp 'repeat-mode)
+  (repeat-mode +1))
 
 ;; Show matching parentheses
 (show-paren-mode +1)
@@ -205,7 +207,7 @@ See also: `package-archives'."
 
 ;; Clean up obsolete buffers automatically
 (require 'midnight)
-(midnight-mode +1)
+(customize-set-variable 'midnight-mode t)
 
 ;; Undo (and redo) changes about the window
 (require 'winner)
@@ -230,11 +232,12 @@ See also: `package-archives'."
 
 ;;;;; Whitespace
 (global-set-key (kbd "C-c t w") #'whitespace-mode)
-(with-eval-after-load 'whitespace
-  ;; Search {zero,full}-width space also.
-  (setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
-  ;; Show zero-width space.
-  (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.])))
+(eval-after-load 'whitespace
+  '(progn
+     ;; Search {zero,full}-width space also.
+     (setq whitespace-space-regexp "\\( +\\|　+\\|​+\\)")
+     ;; Show zero-width space.
+     (add-to-list 'whitespace-display-mappings '(space-mark #x200b [?.]))))
 
 ;;;;; Tab-bar
 (setq tab-bar-show nil)
@@ -262,8 +265,12 @@ See also: `package-archives'."
                                   (interactive)
                                   (insert-char #x3000)))
 
-(global-set-key (kbd "C-c t f f") #'toggle-frame-fullscreen)
-(global-set-key (kbd "C-c t f m") #'toggle-frame-maximized)
+
+(when (fboundp 'toggle-frame-fullscreen)
+  (global-set-key (kbd "C-c t f f") #'toggle-frame-fullscreen))
+(when (fboundp 'toggle-frame-maximized)
+  (global-set-key (kbd "C-c t f m") #'toggle-frame-maximized))
+
 (global-set-key (kbd "C-c t t") #'load-theme)
 
 (global-set-key (kbd "C-c s d") #'find-dired)
@@ -287,8 +294,40 @@ See also: `package-archives'."
 
 (define-key 'help-command (kbd "C-i") #'info-display-manual)
 
-(global-set-key [remap just-one-space] #'cycle-spacing)
+(when (fboundp 'cycle-spacing)
+  (global-set-key [remap just-one-space] #'cycle-spacing))
+
 (global-set-key (kbd "C-x M-u") #'revert-buffer)
+
+(unless (boundp 'ctl-x-x-map)
+  (define-prefix-command 'ctl-x-x-map)
+  (define-key ctl-x-map "x" 'ctl-x-x-map)
+
+  (unless (fboundp 'revert-buffer-quick)
+    (defun my-revert-buffer-quick (&optional auto-save)
+      "Revert without confirmation if the file-visiting buffer is unmodified.
+With prefix AUTO-SAVE, offer to revert from the latest auto-save file."
+      (interactive "P")
+      (if (and buffer-file-name (not (buffer-modified-p)))
+          (progn
+            (revert-buffer (not auto-save) t)
+            (message "Reverted buffer"))
+        (revert-buffer (not auto-save)))))
+
+  (define-key ctl-x-x-map "g"
+    (if (fboundp 'revert-buffer-quick)
+        #'revert-buffer-quick
+      #'my-revert-buffer-quick))
+  (define-key ctl-x-x-map "f"
+    (if (fboundp 'font-lock-update)
+        #'font-lock-update
+      #'font-lock-fontify-buffer))
+  (define-key ctl-x-x-map "r" #'rename-buffer)
+  (define-key ctl-x-x-map "u" #'rename-uniquely)
+  (define-key ctl-x-x-map "n" #'clone-buffer)
+  (define-key ctl-x-x-map "i" #'insert-buffer)
+  (define-key ctl-x-x-map "t" #'toggle-truncate-lines))
+
 (global-set-key (kbd "C-x M-c") #'capitalize-region)
 
 (global-set-key (kbd "M-z") #'zap-up-to-char)
@@ -297,7 +336,7 @@ See also: `package-archives'."
 (global-set-key (kbd "M-s M-j") #'scroll-other-window)
 (global-set-key (kbd "M-s M-k") #'scroll-other-window-down)
 
-(define-advice delete-indentation (:around (fn &rest args) chinese)
+(defadvice delete-indentation (around my-chinese-spacing activate)
   "Add Chinese characters support for `fixup-whitespace'.
 
 Use `cl-letf' to change the behavior of `fixup-whitespace' only when
@@ -311,14 +350,16 @@ called from `delete-indentation'."
                                          (looking-at "\\cc\\|$\\|\\s(\\|\\s'")))
                      nil
                    (insert ?\s))))))
-    (apply fn args)))
+    ad-do-it))
 
-(with-eval-after-load 'epg
-  (setq epg-pinentry-mode 'loopback))
 
-(with-eval-after-load 'fortune
-  (setq fortune-dir "~/fortunes/")
-  (setq fortune-file (expand-file-name "." fortune-dir)))
+(eval-after-load 'epg
+  '(setq epg-pinentry-mode 'loopback))
+
+(eval-after-load 'fortune
+  '(progn
+     (setq fortune-dir "~/fortunes/")
+     (setq fortune-file (expand-file-name "." fortune-dir))))
 
 (setq calendar-chinese-all-holidays-flag t)
 (setq holiday-local-holidays
@@ -426,7 +467,6 @@ mouse-3: Toggle minor modes"
         'my--mode-line-buffer-identification
         'my--mode-line-position
         'my--mode-line-file-info
-        'evil-mode-line-tag
         'mode-line-frame-identification)
   "Left side mode-line.")
 
@@ -458,405 +498,159 @@ mouse-3: Toggle minor modes"
 (global-set-key (kbd "C-c o b") #'org-switchb)
 (global-set-key (kbd "C-c o o") #'org-open-at-point-global)
 
-(setq org-export-backends '(ascii beamer html latex md))
 
-(with-eval-after-load 'org
-  (setq org-agenda-files (list org-directory))
-  (setq org-default-notes-file (expand-file-name "notes.org" org-directory))
+(eval-after-load 'org
+  '(progn
+     (setq org-agenda-files (list org-directory))
+     (setq org-default-notes-file (expand-file-name "notes.org" org-directory))
 
-  ;; Respect property lines.
-  (setq org-startup-folded 'nofold)
+     ;; Respect property lines.
+     (setq org-startup-folded 'nofold)
 
-  ;; Fontify source code in code blocks.
-  (setq org-src-fontify-natively t)
+     ;; Fontify source code in code blocks.
+     (setq org-src-fontify-natively t)
 
-  (setq org-edit-src-content-indentation 0)
+     (setq org-edit-src-content-indentation 0)
 
-  ;; Save state changes in the LOGBOOK drawer.
-  (setq org-log-into-drawer t)
+     ;; Save state changes in the LOGBOOK drawer.
+     (setq org-log-into-drawer t)
 
-  ;; ;; After v9.2 [[https://orgmode.org/Changes.html][changelog]]
-  ;; ;; Org comes with a new template expansion mechanism,
-  ;; ;; `org-insert-structure-template'. Default keybinding is `\C-c\C-,'.
-  ;; ;; If prefer using previous patterns, e.g. `<s',
-  ;; ;; check `org-tempo.el' for more information.
-  ;; (add-to-list 'org-modules 'org-tempo)
+     ;; {} must exist to denote this is a subscript.
+     (setq org-use-sub-superscripts (quote {}))
+     (setq org-export-with-sub-superscripts (quote {}))
 
-  ;; {} must exist to denote this is a subscript.
-  (setq org-use-sub-superscripts (quote {}))
-  (setq org-export-with-sub-superscripts (quote {}))
+     (setq org-tag-alist '(("@work" . ?w) ("@home" . ?h) ("@school" . ?s)
+                           ("@code" . ?c) ("TOC" . ?T) ("noexport" . ?n)))
 
-  (setq org-tag-alist '(("@work" . ?w) ("@home" . ?h) ("@school" . ?s)
-                        ("@code" . ?c) ("TOC" . ?T) ("noexport" . ?n)))
+     (global-set-key (kbd "C-c o d") #'org-demote-subtree)
+     (global-set-key (kbd "C-c o p") #'org-promote-subtree)
 
-  (global-set-key (kbd "C-c o d") #'org-demote-subtree)
-  (global-set-key (kbd "C-c o p") #'org-promote-subtree)
-
-  (global-set-key (kbd "C-c o t") #'org-toggle-link-display)
-  (global-set-key (kbd "C-c o l") #'org-store-link)
-  (global-set-key (kbd "C-c o i") #'org-insert-structure-template)
-
-;;;; Org timestamp
-  ;; -----------------------------------------
-  ;; C-c . \+1w RET ;; => <2020-05-23 Sat +1w>
-  ;; C-c . \-1w RET ;; => <2020-05-23 Sat -1w>
-  ;; -----------------------------------------
-  (define-advice org-time-stamp (:around (fn &rest args) insert-escaped-repeater)
-    "Insert escaped repeater for org timestamp."
-    (let ((org-read-date-final-answer nil))
-      (prog1 (apply fn args)
-        (when (and (stringp org-read-date-final-answer)
-                   (string-match (rx "\\" (group (any "+\\-") (0+ nonl)))
-                                 org-read-date-final-answer))
-          (save-excursion
-            (backward-char)
-            (insert " "
-                    (string-trim-right
-                     (match-string 1 org-read-date-final-answer))))))))
-
-;;;; Org preview
-  ;; Preview LaTeX in Org.
-  (setq org-preview-latex-process-alist
-        '((dvisvgm
-           :programs ("xelatex" "dvisvgm")
-           :description "xdv > svg"
-           :message "you need to install the programs: xelatex and dvisvgm."
-           :image-input-type "xdv"
-           :image-output-type "svg"
-           :image-size-adjust (1.7 . 1.5)
-           :latex-compiler
-           ("xelatex -no-pdf -interaction nonstopmode -output-directory %o %f")
-           :image-converter
-           ;; use `-e' to compute exact glyph bounding boxes
-           ("dvisvgm %f -e -n -b min -c %S -o %O"))
-          (dvipng
-           :programs ("latex" "dvipng")
-           :description "dvi > png"
-           :message "you need to install the programs: latex and dvipng."
-           :image-input-type "dvi"
-           :image-output-type "png"
-           :image-size-adjust (1.0 . 1.0)
-           :latex-compiler
-           ("latex -interaction nonstopmode -output-directory %o %f")
-           :image-converter
-           ("dvipng -D %D -T tight -bg Transparent -o %O %f"))
-          (imagemagick
-           :programs ("latex" "convert")
-           :description "pdf > png"
-           :message "you need to install the programs: latex and imagemagick."
-           :image-input-type "pdf"
-           :image-output-type "png"
-           :image-size-adjust (1.0 . 1.0)
-           :latex-compiler
-           ("pdflatex -interaction nonstopmode -output-directory %o %f")
-           :image-converter
-           ("convert -density %D -trim -antialias %f -quality 100 %O"))))
-  (setq org-preview-latex-default-process 'dvisvgm)
-
-  ;; ;; Enlarge the preview magnification.
-  ;; (plist-put org-format-latex-options :scale 1.5)
-
-  ;; https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview-fragments-in-org-mode/
-  ;; Use center or right, anything else means left-justified as the default.
-  (plist-put org-format-latex-options :justify 'right)
-
-  (defvar-local my--org-equation-number-cache nil
-    "Cached equation numbers as (BUFFER-TICK . NUMBERS).")
-
-  (defun my--org-equation-numbers ()
-    "Return an alist mapping LaTeX environment positions to equation numbers."
-    (let ((tick (buffer-chars-modified-tick)))
-      (if (eql tick (car-safe my--org-equation-number-cache))
-          (cdr my--org-equation-number-cache)
-        (let ((counter -1))
-          (setq my--org-equation-number-cache
-                (cons
-                 tick
-                 (org-element-map
-                     (org-element-parse-buffer) 'latex-environment
-                   (lambda (environment)
-                     (let ((begin (org-element-property :begin environment))
-                           (value (org-element-property :value environment)))
-                       (cons
-                        begin
-                        (cond
-                         ((and (string-match-p (rx "\\begin{equation}") value)
-                               (not (string-match-p (rx "\\tag{") value)))
-                          (cl-incf counter)
-                          counter)
-                         ((string-match-p (rx "\\begin{align}") value)
-                          (cl-incf counter)
-                          (prog1 counter
-                            (with-temp-buffer
-                              (insert value)
-                              (goto-char (point-min))
-                              ;; `\\' is used for a new line.
-                              ;; Each one leads to a number.
-                              (cl-incf counter (count-matches (rx "\\\\" line-end)))
-                              ;; Unless there are nonumbers.
-                              (goto-char (point-min))
-                              (cl-decf counter
-                                       (count-matches (rx "\\nonumber")))
-                              (goto-char (point-min))
-                              (cl-decf counter
-                                       (count-matches (rx "\\notag"))))))
-                         (t nil)))))))
-          (cdr my--org-equation-number-cache)))))
-
-  (defun my--org-justify-fragment-overlay-h (beg end &rest _)
-    "Adjust the justification of a LaTeX fragment horizontally.
-The justification is set by :justify in `org-format-latex-options'.
-Only equations at the beginning of a line are justified.
-
-URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/06/Justifying-LaTeX-preview-fragments-in-org-mode/'."
-    (when-let* ((position (plist-get org-format-latex-options :justify))
-                (overlay (my--org-preview-overlay-at beg end))
-                (display (overlay-get overlay 'display))
-                (width (car (image-size display)))
-                (at-line-beginning
-                 (= beg (save-excursion
-                          (goto-char beg)
-                          (line-beginning-position))))
-                (offset
-                 (pcase position
-                   ('center (floor (- (/ fill-column 2) (/ width 2))))
-                   ('right (floor (- fill-column width))))))
-      (when at-line-beginning
-        (overlay-put overlay 'before-string
-                     (make-string (max 0 offset) #x20)))))
-
-  (advice-add 'org--make-preview-overlay
-              :after #'my--org-justify-fragment-overlay-h)
-
-  (defun my-org-toggle-justify-fragment-overlay-h ()
-    "Toggle justify LaTeX fragment horizontally."
-    (interactive)
-    (if (advice-member-p #'my--org-justify-fragment-overlay-h
-                         'org--make-preview-overlay)
-        (advice-remove 'org--make-preview-overlay
-                       #'my--org-justify-fragment-overlay-h)
-      (advice-add 'org--make-preview-overlay
-                  :after #'my--org-justify-fragment-overlay-h)))
-
-  (defun my--org-preview-overlay-at (beg end)
-    "Return the Org LaTeX preview overlay between BEG and END."
-    (seq-find (lambda (overlay)
-                (eq (overlay-get overlay 'org-overlay-type)
-                    'org-latex-overlay))
-              (overlays-at (/ (+ beg end) 2) t)))
-
-  (defun my--org-justify-fragment-overlay-v (beg end &rest _)
-    "Adjust the justification of a LaTeX fragment vertically."
-    (when-let* ((overlay (my--org-preview-overlay-at beg end))
-                (display (overlay-get overlay 'display))
-                ((eq (car-safe display) 'image)))
-      (overlay-put overlay 'display
-                   (cons 'image
-                         (plist-put (copy-sequence (cdr display))
-                                    :ascent 95)))))
-
-  (defun my-org-toggle-justify-fragment-overlay-v ()
-    "Toggle justify LaTeX fragment vertically."
-    (interactive)
-    (if (advice-member-p #'my--org-justify-fragment-overlay-v
-                         'org--make-preview-overlay)
-        (advice-remove 'org--make-preview-overlay
-                       #'my--org-justify-fragment-overlay-v)
-      (advice-add 'org--make-preview-overlay
-                  :after #'my--org-justify-fragment-overlay-v)))
-
-  (defun my--org-renumber-fragment (orig-func &rest args)
-    "Number equations in LaTeX fragment.
-
-URL `https://kitchingroup.cheme.cmu.edu/blog/2016/11/07/Better-equation-numbering-in-LaTeX-fragments-in-org-mode/'."
-    (let ((equation-number
-           (cdr (assq (point) (my--org-equation-numbers)))))
-      (when equation-number
-        (setf (car args)
-              (concat
-               (format "\\setcounter{equation}{%s}\n" equation-number)
-               (car args)))))
-    (apply orig-func args))
-
-  (defun my-org-toggle-renumber-fragment ()
-    "Toggle renumber LaTeX fragment behavior."
-    (interactive)
-    (if (advice-member-p #'my--org-renumber-fragment
-                         'org-create-formula-image)
-        (advice-remove 'org-create-formula-image
-                       #'my--org-renumber-fragment)
-      (advice-add 'org-create-formula-image
-                  :around #'my--org-renumber-fragment)))
+     (global-set-key (kbd "C-c o t") #'org-toggle-link-display)
+     (global-set-key (kbd "C-c o l") #'org-store-link)
+     (when (fboundp 'org-insert-structure-template)
+       (global-set-key (kbd "C-c o i") #'org-insert-structure-template))
 
 ;;;; Org todo
-  ;; `X/Y', X means action when enters the state, Y means action when
-  ;; leaves the state. Use `@' to add notes and status information
-  ;; (including time), use `!' to add status information only.
+     ;; `X/Y', X means action when enters the state, Y means action when
+     ;; leaves the state. Use `@' to add notes and status information
+     ;; (including time), use `!' to add status information only.
 
-  ;; | DONE(d@)   | add notes when entering                            |
-  ;; | DONE(d/!)  | add status when leaving                            |
-  ;; | DONE(d@/!) | add note when entering and add status when leaving |
-  ;; | DONE(d@/)  | WARNING: illegal                                   |
+     ;; | DONE(d@)   | add notes when entering                            |
+     ;; | DONE(d/!)  | add status when leaving                            |
+     ;; | DONE(d@/!) | add note when entering and add status when leaving |
+     ;; | DONE(d@/)  | WARNING: illegal                                   |
 
-  ;; NOTE: When leaving state A to state B, if A has a leaving action
-  ;; and B has an entering action. A's leaving action won't be triggered
-  ;; instead of executing B's entering action.
+     ;; NOTE: When leaving state A to state B, if A has a leaving action
+     ;; and B has an entering action. A's leaving action won't be triggered
+     ;; instead of executing B's entering action.
 
-(setq org-todo-keywords
-       '((sequence "TODO(t)" "STARTED(s!/!)" "HANGUP(h@)"
-                    "|"
-                    "DONE(d)" "ABORT(a@/!)")
-         (sequence "REPORT(r)" "BUG(b@)" "KNOWNCAUSE(k@)"
-                  "|"
-                  "FIXED(f!)")
-         (sequence "WAITING(w@/!)" "SOMEDAY(S@)" "PROJECT(P@)"
-                  "|"
-                  "CANCELLED(c@/!)"))))
-
-)
-
-;;;; Org-babel
-(with-eval-after-load 'ob
-  (defun my-org-babel-highlight-result ()
-    "Highlight the result of the current source block.
-
-Adapt from `org-babel-remove-result'."
-    (interactive)
-    (when-let* ((location (org-babel-where-is-src-block-result))
-                (case-fold-search t))
-      (save-excursion
-        (goto-char location)
-        (when (looking-at org-babel-result-regexp)
-          (pulse-momentary-highlight-region
-           (1+ (match-end 0))
-           (progn (forward-line) (org-babel-result-end)))))))
-
-  (add-hook 'org-babel-after-execute-hook #'my-org-babel-highlight-result)
-
-  (define-advice org-babel-execute-src-block
-      (:around (fn &optional arg info params executor-type) lazy-load-languages)
-    "Load languages when needed."
-    (let* ((info (or info (org-babel-get-src-block-info)))
-           (language (car info))
-           (language-symbol (and language (intern language)))
-           (lang-cons (assq language-symbol org-babel-load-languages)))
-      (when (and language-symbol (not (cdr lang-cons)))
-        (add-to-list 'org-babel-load-languages (cons language-symbol t))
-        (org-babel-do-load-languages 'org-babel-load-languages
-                                     org-babel-load-languages))
-      (funcall fn arg info params executor-type)))
-
-  )
+     (setq org-todo-keywords
+           '((sequence "TODO(t)" "STARTED(s!/!)" "HANGUP(h@)"
+                       "|"
+                       "DONE(d)" "ABORT(a@/!)")
+             (sequence "REPORT(r)" "BUG(b@)" "KNOWNCAUSE(k@)"
+                       "|"
+                       "FIXED(f!)")
+             (sequence "WAITING(w@/!)" "SOMEDAY(S@)" "PROJECT(P@)"
+                       "|"
+                       "CANCELLED(c@/!)")))))
 
 ;;;; Org-archive
-(with-eval-after-load 'org-archive
-  (defun my-org-archive-done-tasks ()
-    "Archive DONE tasks."
-    (interactive)
-    (org-map-entries
-     (lambda ()
-       (org-archive-subtree)
-       (setq org-map-continue-from (outline-previous-heading)))
-     "/DONE" 'file)
-    (org-map-entries
-     (lambda ()
-       (org-archive-subtree)
-       (setq org-map-continue-from (outline-previous-heading)))
-     "/ABORT" 'file)
-    (org-map-entries
-     (lambda ()
-       (org-archive-subtree)
-       (setq org-map-continue-from (outline-previous-heading)))
-     "/CANCELLED" 'file))
+(eval-after-load 'org-archive
+  '(progn
+     (defun my-org-archive-done-tasks ()
+       "Archive DONE tasks."
+       (interactive)
+       (org-map-entries
+        (lambda ()
+          (org-archive-subtree)
+          (setq org-map-continue-from (outline-previous-heading)))
+        "/DONE" 'file)
+       (org-map-entries
+        (lambda ()
+          (org-archive-subtree)
+          (setq org-map-continue-from (outline-previous-heading)))
+        "/ABORT" 'file)
+       (org-map-entries
+        (lambda ()
+          (org-archive-subtree)
+          (setq org-map-continue-from (outline-previous-heading)))
+        "/CANCELLED" 'file))
 
-  (setq org-archive-mark-done nil)
-  (setq org-archive-location "%s_archive::* Archive"))
+     (setq org-archive-mark-done nil)
+     (setq org-archive-location "%s_archive::* Archive")))
 
 (global-set-key (kbd "C-c o c") #'org-capture)
 
 ;;;; Org-capture
-(with-eval-after-load 'org-capture
-  (defun my--org-capture-find-month-tree ()
-    "Go to current month heading."
-    (let ((heading-list (string-split (format-time-string "%Y %m")))
-          (level 1)
-          end)
-      (unless (derived-mode-p 'org-mode)
-        (user-error "Target buffer `%s' should be in org mode"
-                    (current-buffer)))
-      (goto-char (point-min))
-      ;; Locate YEAR headline, then MONTH headline.
-      (dolist (heading heading-list)
-        (let ((re (format org-complex-heading-regexp-format
-                          (regexp-quote heading))))
-          (if (re-search-forward re end t)
-              (goto-char (line-beginning-position))
-            ;; Not found, create a new headline at EOF.
-            (progn
-              (goto-char (point-max))
-              (or (bolp) (insert "\n"))
-              (when (/= (point) (point-min)) (org-end-of-subtree t t))
-              (insert (make-string level ?*) " " heading "\n"))))
-        (cl-incf level)
-        (setq end (save-excursion (org-end-of-subtree t t))))
-      (org-end-of-subtree)))
+(eval-after-load 'org-capture
+  '(progn
+     (defun my--org-capture-find-month-tree ()
+       "Go to current month heading."
+       (let ((heading-list (split-string (format-time-string "%Y %m")))
+             (level 1)
+             end)
+         (unless (derived-mode-p 'org-mode)
+           (user-error "Target buffer `%s' should be in org mode"
+                       (current-buffer)))
+         (goto-char (point-min))
+         ;; Locate YEAR headline, then MONTH headline.
+         (dolist (heading heading-list)
+           (let ((re (format org-complex-heading-regexp-format
+                             (regexp-quote heading)))
+                 found)
+             (while (and (not found) (re-search-forward re end t))
+               (setq found (save-excursion
+                             (beginning-of-line)
+                             (= (org-outline-level) level))))
+             (if found
+                 (goto-char (line-beginning-position))
+               ;; Append inside the parent subtree, or at EOF for a new year.
+               (goto-char (or end (point-max)))
+               (or (bolp) (insert "\n"))
+               (insert (make-string level ?*) " " heading "\n")
+               (forward-line -1)))
+           (cl-incf level)
+           (setq end (save-excursion (org-end-of-subtree t t))))
+         (org-end-of-subtree)))
 
-  ;; |                org-capture-templates common used entry               |
-  ;; |--------+-------------------------------------------------------------|
-  ;; | %a     | annotation, normally the link created with `org-store-link' |
-  ;; | %i     | initial content, copied from the active region              |
-  ;; | %^g    | tag                                                         |
-  ;; | %t     | timestamp, date only                                        |
-  ;; | %T     | timestamp, with date and time                               |
-  ;; | %u，%U | timestamp, but inactive                                     |
-  ;; | %?     | cursor location after completing the template               |
-  ;; NOTE: inactive timestamp will not be added to agenda.
+     ;; |                org-capture-templates common used entry               |
+     ;; |--------+-------------------------------------------------------------|
+     ;; | %a     | annotation, normally the link created with `org-store-link' |
+     ;; | %i     | initial content, copied from the active region              |
+     ;; | %^g    | tag                                                         |
+     ;; | %t     | timestamp, date only                                        |
+     ;; | %T     | timestamp, with date and time                               |
+     ;; | %u，%U | timestamp, but inactive                                     |
+     ;; | %?     | cursor location after completing the template               |
+     ;; NOTE: inactive timestamp will not be added to agenda.
 
-  (setq org-capture-templates
-        '(("b" "Bill" plain
-           (file+function "bill.org" my--org-capture-find-month-tree)
-           "| %U | %^{category} | %^{desc} | %^{price} |" :kill-buffer t)
-          ("c" "Capture" plain
-           (file+olp+datetree org-default-notes-file)
-           "* %^{capture}\n   %u\n")
-          ("t" "Todo" entry
-           (file+headline "todo.org" "Todo")
-           "* TODO %^{todo}\n")
-          ("w" "Work" entry
-           (file+headline "work.org" "Work")
-           "* %^{task name}\n   %t\n"
-           :clock-in t :clock-resume t)
-          ("r" "Read" entry
-           (file+headline "read.org" "Book")
-           "* %^{book name}\n   %u\n"
-           :clock-in t :clock-resume t))))
+     (setq org-capture-templates
+           '(("b" "Bill" plain
+              (file+function "bill.org" my--org-capture-find-month-tree)
+              "| %U | %^{category} | %^{desc} | %^{price} |" :kill-buffer t)
+             ("c" "Capture" plain
+              (file+datetree org-default-notes-file)
+              "* %^{capture}\n   %u\n")
+             ("t" "Todo" entry
+              (file+headline "todo.org" "Todo")
+              "* TODO %^{todo}\n")
+             ("w" "Work" entry
+              (file+headline "work.org" "Work")
+              "* %^{task name}\n   %t\n"
+              :clock-in t :clock-resume t)
+             ("r" "Read" entry
+              (file+headline "read.org" "Book")
+              "* %^{book name}\n   %u\n"
+              :clock-in t :clock-resume t)))))
 
 ;;;; Org-clock
-(with-eval-after-load 'org-clock
-  ;; Save clock data and notes in the LOGBOOK drawer.
-  (setq org-clock-into-drawer t)
-  ;; Remove clocked tasks with 0:00 duration.
-  (setq org-clock-out-remove-zero-time-clocks t))
-
-;;;; Ox-latex
-(with-eval-after-load 'ox-latex
-  ;; Export org in Chinese into PDF.
-  ;; https://freizl.github.io/posts/2012-04-06-export-orgmode-file-in-Chinese.html
-  (setq org-latex-pdf-process
-        '("xelatex -interaction nonstopmode -output-directory %o %f"
-          "xelatex -interaction nonstopmode -output-directory %o %f"
-          "xelatex -interaction nonstopmode -output-directory %o %f"))
-  (add-to-list 'org-latex-classes
-               '("ctexart" "\\documentclass[11pt]{ctexart}"
-                 ("\\section{%s}" . "\\section*{%s}")
-                 ("\\subsection{%s}" . "\\subsection*{%s}")
-                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
-  (setq org-latex-default-class "ctexart")
-  ;; Compared to `pdflatex', `xelatex' supports unicode and can use
-  ;; system's font.
-  (setq org-latex-compiler "xelatex"))
+(eval-after-load 'org-clock
+  '(progn
+     ;; Save clock data and notes in the LOGBOOK drawer.
+     (setq org-clock-into-drawer t)
+     ;; Remove clocked tasks with 0:00 duration.
+     (setq org-clock-out-remove-zero-time-clocks t)))
 
 ;;; GUI
 
@@ -866,30 +660,13 @@ Adapt from `org-babel-remove-result'."
 
   (setq-default frame-title-format "GNU Emacs %@ %b")
 
-  ;; Move more smoothly.
+  ;; Move more smoothly when precision scrolling is available.
   (when (fboundp 'pixel-scroll-precision-mode)
     (pixel-scroll-precision-mode +1))
 
   (when (featurep 'ns)
-    ;; Make NS behavior the same as other platforms.
-    (setq ns-command-modifier 'meta)
-    (setq ns-alternate-modifier 'super)
-
-    (push '(ns-transparent-titlebar . t) default-frame-alist)
-
-    (defun my--set-frame-ns-appearance (frame &rest _)
-      "Set ns-appearance frame parameter for FRAME."
-      (when (display-graphic-p frame)
-        (let ((mode (frame-parameter frame 'background-mode)))
-          (modify-frame-parameters frame `((ns-appearance . ,mode))))))
-
-    (defun my--set-all-frames-ns-appearance (&rest _)
-      "Set ns-appearance frame parameter for all frames."
-      (mapc #'my--set-frame-ns-appearance (frame-list)))
-
-    (add-hook 'after-init-hook #'my--set-all-frames-ns-appearance)
-    (add-hook 'after-make-frame-functions #'my--set-frame-ns-appearance)
-    (advice-add 'frame-set-background-mode :after #'my--set-frame-ns-appearance))
+    (setq ns-command-modifier 'meta
+          ns-alternate-modifier 'super))
 
   (defun my-set-window-transparency (value)
     "Set the VALUE of transparency of the frame window."
@@ -1016,7 +793,7 @@ SCJK-SCALE is nil, don't add size attributes to the CJK spec."
     "Translate FONT-NAME to font-spec.
 
 If FONT-NAME is nil, use the first font in `my-font-alist'."
-    (or (alist-get font-name my-font-alist nil nil #'equal)
+    (or (cdr (assoc font-name my-font-alist))
         (cdar my-font-alist)))
 
   (defun my-load-default-font (font-name size &rest attrs)
@@ -1067,22 +844,11 @@ ATTRS."
   (global-set-key (kbd "C-c m F") #'my-load-font)
 
   ;; Fonts are global defaults and are inherited by newly created frames.
-  (my-load-default-font nil my-font-size)
-
-  ;; Emoji display.
-  (set-fontset-font t 'emoji
-                    (font-spec
-                     :family (string-join
-                              (list (if (eq system-type 'darwin) "Apple" "Noto")
-                                    "Color"
-                                    "Emoji")
-                              " "))
-                    nil 'prepend))
+  (my-load-default-font nil my-font-size))
 
 ;;; Dired
 
 (if (and (eq system-type 'darwin)
-         (< emacs-major-version 30)
          (executable-find "gls"))
     (setq insert-directory-program "gls")
   ;; Suppres Dired warning when not using GNU ls
@@ -1090,10 +856,10 @@ ATTRS."
 
 (setq dired-listing-switches "-alh")
 
-;; Search file name only when focus is over filename.
+;; Search file names when point is initially on a file name.
 (setq dired-isearch-filenames 'dwim)
 
-;; Kill current dired buffer when selecting a new directory.
+;; Reuse Dired buffers when navigating to another directory.
 (setq dired-kill-when-opening-new-dired-buffer t)
 
 ;; Make dired "guess" target directory.
@@ -1118,16 +884,16 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
       (let ((file1 (car files))
             (file2 (if (cdr files)
                        (cadr files)
-                       (read-file-name
-                        "File: "
-                        (dired-dwim-target-directory))))
-             (startup-hooks
+                     (read-file-name
+                      "File: "
+                      (dired-dwim-target-directory))))
+            (startup-hooks
              (list (apply-partially
                     #'my--ediff-restore-window-configuration
                     wnd))))
-		(if (file-newer-than-file-p file1 file2)
-		    (ediff-files file2 file1 startup-hooks)
-		  (ediff-files file1 file2 startup-hooks))))
+	(if (file-newer-than-file-p file1 file2)
+	    (ediff-files file2 file1 startup-hooks)
+	  (ediff-files file1 file2 startup-hooks))))
      (t
       (user-error "Mark more than 2 files")))))
 
@@ -1168,175 +934,21 @@ URL `https://oremacs.com/2017/03/18/dired-ediff/'."
 
 ;;; Ibuffer
 
-(with-eval-after-load 'ibuffer
-
-  ;; Display vc status info in the ibuffer list.
-  (defun ibuffer-vc--state (file)
-    "Return the `vc-state' for FILE, or `nil' if unregistered."
-    (ignore-errors (vc-state file)))
-
-  (defun ibuffer-vc--status-string ()
-    "Return a short string to represent the current buffer's status."
-    (when buffer-file-name
-      (let ((state (ibuffer-vc--state buffer-file-name)))
-        (if state
-            (symbol-name state)
-          "-"))))
-
-  ;; Use human readable Size column instead of original one.
-  (define-ibuffer-column my--size
-    (:name "Size" :inline t)
-    (cond
-     ((> (buffer-size) 1000000)
-      (format "%7.1fM" (/ (buffer-size) 1000000.0)))
-     ((> (buffer-size) 1000)
-      (format "%7.1fk" (/ (buffer-size) 1000.0)))
-     (t
-      (format "%8d" (buffer-size)))))
-
-  (define-ibuffer-column vc-status-mini
-    (:name "V")
-    (if buffer-file-name
-        (let ((state (ibuffer-vc--state buffer-file-name)))
-          (cond
-           ((eq 'added state) "A")
-           ((eq 'removed state) "D")
-           ((eq 'up-to-date state) "U")
-           ((eq 'edited state) "E")
-           ((eq 'needs-update state) "N")
-           ((memq state '(conflict needs-merge unlocked-changes)) "C")
-           ((eq 'ignored state) "!")
-           ((memq state '(() unregistered missing)) "?")))
-      " "))
-
-  (define-ibuffer-column vc-status
-    (:name "VC status")
-    (ibuffer-vc--status-string))
-
-  ;; Modify the default ibuffer-formats.
-  (setq ibuffer-formats
-        '((mark modified read-only vc-status-mini " "
-                (name 18 18 :left :elide)
-                " "
-                (my--size 9 -1 :right)
-                " "
-                (mode 16 16 :left :elide)
-                " "
-                (vc-status 16 16 :left)
-                " "
-                filename-and-process)))
-
-  (defun my--ibuffer-get-major-modes-list ()
-    "Get all major modes based on opened buffers."
-    (mapcar
-     (lambda (buffer)
-       (buffer-local-value 'major-mode (get-buffer buffer)))
-     (buffer-list (selected-frame))))
-
-  (defun my--ibuffer-generate-filter-groups-alist (mm-list result-list)
-    "Create an alist of filtering groups to switch between."
-    (if mm-list
-        (let* ((cur-mm (car mm-list))
-               (next-res-list-el `(,(capitalize
-                                     ;; trim `-mode' string
-                                     (substring (symbol-name cur-mm) 0 -5))
-                                   (mode . ,cur-mm))))
-          (my--ibuffer-generate-filter-groups-alist
-           (cdr mm-list) (cons next-res-list-el result-list)))
-      result-list))
-
-  (defun my--ibuffer-generate-filter-groups-by-major-mode ()
-    "Generate `ibuffer-saved-filter-groups' by major mode."
-    (let* ((ignore-modes '(Buffer-menu-mode
-                           compilation-mode
-                           minibuffer-inactive-mode
-                           ibuffer-mode
-                           magit-process-mode
-                           messages-buffer-mode
-                           fundamental-mode
-                           completion-list-mode
-                           help-mode
-                           Info-mode))
-           (groups
-            (list
-             (cons "default"
-                   (my--ibuffer-generate-filter-groups-alist
-                    ;; Created by major mode.
-                    (cl-set-difference
-                     (cl-remove-duplicates
-                      (my--ibuffer-get-major-modes-list))
-                     ignore-modes)
-                    ;; Manually created add here.
-                    '(("Modified" (predicate buffer-modified-p
-                                             (current-buffer)))))))))
-      (setq ibuffer-saved-filter-groups groups)
-      (ibuffer-switch-to-saved-filter-groups "default")))
-
-  (setq ibuffer-expert t
-        ibuffer-show-empty-filter-groups nil
-        ibuffer-display-summary nil)
-
-  (add-hook 'ibuffer-mode-hook
-            (lambda ()
-              (ibuffer-switch-to-saved-filter-groups "default")))
-  ;; Update filter group when calling `ibuffer'.
-  (add-hook 'ibuffer-hook #'my--ibuffer-generate-filter-groups-by-major-mode))
-
 ;; Replace `buffer-menu' with `ibuffer'.
 (global-set-key [remap list-buffers] #'ibuffer)
 
-;;; Ido
+;;; Minibuffer completion
 
-(if (fboundp 'fido-mode)
-    (progn
-      (fido-mode +1)
-      (when (fboundp 'fido-vertical-mode)
-        (fido-vertical-mode +1)))
-  (progn
-    (ido-mode +1)
-    (ido-everywhere +1)))
+(cond
+ ((fboundp 'fido-vertical-mode)
+  (fido-vertical-mode +1))
+ ((fboundp 'fido-mode)
+  (fido-mode +1))
+ (t
+  (ido-mode +1)
+  (ido-everywhere +1)))
 
 ;;; Prog
-
-;;;; c-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(c-mode . c-ts-mode))
-  (add-to-list 'major-mode-remap-alist '(c++-mode . c++-ts-mode)))
-
-(with-eval-after-load 'c-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'c '("https://github.com/tree-sitter/tree-sitter-c"))
-
-    (my--treesit-ensure-grammar 'cpp '("https://github.com/tree-sitter/tree-sitter-cpp"))))
-
-;;;; cmake-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist
-               '("\\(?:CMakeLists\\.txt\\|\\.cmake\\)\\'" . cmake-ts-mode)))
-
-(with-eval-after-load 'cmake-ts-mode
-  (my--treesit-ensure-grammar 'cmake '("https://github.com/uyha/tree-sitter-cmake")))
-
-;;;; csharp-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(csharp-mode . csharp-ts-mode)))
-
-(with-eval-after-load 'csharp-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'c-sharp '("https://github.com/tree-sitter/tree-sitter-c-sharp"))))
-
-;;;; dockerfile-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist
-               '("\\(?:Dockerfile\\(?:\\..*\\)?\\|\\.[Dd]ockerfile\\)\\'" . dockerfile-ts-mode)))
-
-(with-eval-after-load 'dockerfile-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'dockerfile '("https://github.com/camdencheek/tree-sitter-dockerfile"))))
 
 ;;;; elisp-mode
 
@@ -1359,7 +971,9 @@ URL `https://endlessparentheses.com/get-in-the-habit-of-using-sharp-quote.html'.
 With a `\\[universal-argument]' prefix argument ARG, delete the
 sexp before point and insert output into current position."
   (interactive "P")
-  (let ((value (eval (elisp--preceding-sexp))))
+  (let ((value (eval (save-excursion
+                       (backward-sexp)
+                       (read (current-buffer))))))
     (save-excursion
       (cond
        ((not arg)
@@ -1378,240 +992,72 @@ sexp before point and insert output into current position."
                    lisp-interaction-mode-map))
   (define-key map (kbd "C-c C-p") #'my-eval-print-last-sexp))
 
-;;;; elixir-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist
-               '("\\(?:\\.elixir\\|\\.exs?\\|mix\\.lock\\)\\'" . elixir-ts-mode)))
-
-(with-eval-after-load 'elixir-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'elixir '("https://github.com/elixir-lang/tree-sitter-elixir"))))
-
-;;;; go-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.go\\'" . go-ts-mode))
-  (add-to-list 'auto-mode-alist '("/go\\.mod\\'" . go-mod-ts-mode)))
-
-(with-eval-after-load 'go-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'go '("https://github.com/tree-sitter/tree-sitter-go"))
-
-    (my--treesit-ensure-grammar 'gomod '("https://github.com/camdencheek/tree-sitter-go-mod"))))
-
-;;;; heex-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.[hl]?eex\\'" . heex-ts-mode)))
-
-(with-eval-after-load 'heex-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'heex '("https://github.com/phoenixframework/tree-sitter-heex"))))
-
-;;;; java-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(java-mode . java-ts-mode))
-  (add-to-list 'auto-mode-alist '("\\.java\\'" . java-ts-mode)))
-
-(with-eval-after-load 'java-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'java '("https://github.com/tree-sitter/tree-sitter-java"))))
-
-;;;; js
+;;;; JavaScript and JSON
 
 (add-to-list 'auto-mode-alist '("\\.[cm]js\\'" . js-mode))
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(js-mode . js-ts-mode)))
+;; Emacs 24.3 has no separate JSON mode; JavaScript handles its syntax.
+(add-to-list 'auto-mode-alist '("\\.jsonc?\\'" . js-mode))
+(eval-after-load 'js
+  '(progn
+     (setq js-indent-level 2)))
 
-(with-eval-after-load 'js
-  (setq js-indent-level 2)
-
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'javascript '("https://github.com/tree-sitter/tree-sitter-javascript"))
-
-    (my--treesit-ensure-grammar 'jsdoc '("https://github.com/tree-sitter/tree-sitter-jsdoc"))))
-
-;;;; json-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
-  (add-to-list 'auto-mode-alist '("\\.json\\'" . json-ts-mode)))
-
-(with-eval-after-load 'json-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'json '("https://github.com/tree-sitter/tree-sitter-json"))))
-
-;;;; lua-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.lua\\'" . lua-ts-mode))
-  (add-to-list 'interpreter-mode-alist '("\\<lua\\(?:jit\\)?" . lua-ts-mode)))
-
-(with-eval-after-load 'lua-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'lua '("https://github.com/tree-sitter-grammars/tree-sitter-lua"))))
-
-;;;; php-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist
-               '("\\(?:\\.\\(?:php[s345]?\\|phtml\\|inc\\|stub\\)\\|/\\.php_cs\\(?:\\.dist\\)?\\)\\'" . php-ts-mode))
-  (add-to-list 'interpreter-mode-alist
-               '("php\\(?:-?[34578]\\(?:\\.[0-9]+\\)*\\)?" . php-ts-mode)))
-
-(with-eval-after-load 'php-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'php '("https://github.com/tree-sitter/tree-sitter-php" nil "php/src"))
-
-    (my--treesit-ensure-grammar 'phpdoc '("https://github.com/claytonrcarter/tree-sitter-phpdoc"))))
-
-;;;; python
+;;;; Python
 
 (add-to-list 'auto-mode-alist '("\\.[cir]py\\'" . python-mode))
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode)))
+(eval-after-load 'python
+  '(progn
+     (setq python-indent-guess-indent-offset nil
+           python-indent-offset 4)))
 
-(with-eval-after-load 'python
-  (setq python-indent-guess-indent-offset nil)
-  (setq python-indent-offset 4)
+;;;; Ruby
 
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'python '("https://github.com/tree-sitter/tree-sitter-python"))))
-
-;;;; ruby-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(ruby-mode . ruby-ts-mode))
-  (add-to-list 'auto-mode-alist
-               '("\\(?:\\.\\(?:rbw?\\|ru\\|rake\\|thor\\|axlsx\\|jbuilder\\|rabl\\|gemspec\\|podspec\\)\\|/\\(?:Gem\\|Rake\\|Cap\\|Thor\\|Puppet\\|Berks\\|Brew\\|Fast\\|Vagrant\\|Guard\\|Pod\\)file\\)\\'" . ruby-ts-mode)))
-
-(with-eval-after-load 'ruby-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'ruby '("https://github.com/tree-sitter/tree-sitter-ruby"))))
-
-;;;; rust-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.rs\\'" . rust-ts-mode)))
-
-(with-eval-after-load 'rust-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'rust '("https://github.com/tree-sitter/tree-sitter-rust"))))
+(add-to-list 'auto-mode-alist '("\\(?:\\.axlsx\\|/Fastfile\\)\\'" . ruby-mode))
 
 ;;;; tex-mode
 
-(with-eval-after-load 'tex-mode
-  (setq tex-command "xelatex")
-  (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf")))
-
-;;;; typescript-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.[jt]sx\\'" . tsx-ts-mode))
-  (add-to-list 'auto-mode-alist '("\\.ts\\'" . typescript-ts-mode)))
-
-(with-eval-after-load 'typescript-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'tsx '("https://github.com/tree-sitter/tree-sitter-typescript" nil "tsx/src"))
-
-    (my--treesit-ensure-grammar 'typescript '("https://github.com/tree-sitter/tree-sitter-typescript" nil "typescript/src"))))
-
-;;;; Lsp
-
-(when (fboundp 'eglot)
-  (global-set-key (kbd "C-c l l") #'eglot)
-  (setq eglot-autoshutdown t)
-  (setq eglot-extend-to-xref t)
-  (setq eglot-ignored-server-capabilities '(:documentHighlightProvider))
-
-  (with-eval-after-load 'eglot
-    (global-set-key (kbd "C-c l a") #'eglot-code-actions)
-    (global-set-key (kbd "C-c l c") #'eglot-show-workspace-configuration)
-    (global-set-key (kbd "C-c l d") #'eglot-find-declaration)
-    (global-set-key (kbd "C-c l f") #'eglot-format)
-    (global-set-key (kbd "C-c l h") #'eldoc)
-    (global-set-key (kbd "C-c l i") #'eglot-find-implementation)
-    (global-set-key (kbd "C-c l n") #'eglot-rename)
-    (global-set-key (kbd "C-c l q") #'eglot-shutdown)
-    (global-set-key (kbd "C-c l t") #'eglot-find-typeDefinition)
-    (global-set-key (kbd "C-c l L") #'eglot-events-buffer)
-    (global-set-key (kbd "C-c l R") #'eglot-reconnect)
-    (global-set-key (kbd "C-c l Q") #'eglot-shutdown-all)))
+(eval-after-load 'tex-mode
+  '(progn
+     (setq tex-command "xelatex")
+     (add-to-list 'tex-compile-commands '("xelatex %f" t "%r.pdf"))))
 
 ;;;; Compile
 
 (defvar my-last-compilation-buffer nil
   "The last buffer in which compilation took place.")
 
-(with-eval-after-load 'compile
-  ;; Colorize output of Compilation Mode
-  ;; https://stackoverflow.com/a/3072831/355252
-  (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter)
+(eval-after-load 'compile
+  '(progn
+     (require 'ansi-color)
+     (when (fboundp 'ansi-color-compilation-filter)
+       (add-hook 'compilation-filter-hook #'ansi-color-compilation-filter))
 
-  ;; Save before compiling
-  (setq compilation-ask-about-save nil)
-  ;; Automatically scroll to first error
-  (setq compilation-scroll-output 'first-error)
-  ;; Kill old compile processes before starting the new one
-  (setq compilation-always-kill t))
+     ;; Save before compiling
+     (setq compilation-ask-about-save nil)
+     ;; Automatically scroll to first error
+     (setq compilation-scroll-output 'first-error)
+     ;; Kill old compile processes before starting the new one
+     (setq compilation-always-kill t)))
 
 (global-set-key (kbd "C-c c k") #'compile)
 (global-set-key (kbd "C-c c r") #'recompile)
 
 ;;;; Vendor
 
-(with-eval-after-load 'flymake
-  (global-set-key (kbd "C-c ! b") #'flymake-show-buffer-diagnostics)
-  (global-set-key (kbd "C-c ! p") #'flymake-show-project-diagnostics))
 
-(with-eval-after-load 'flyspell
-  (when (executable-find "aspell")
-    (setq ispell-program-name "aspell")
-    (setq ispell-extra-args '("--sug-mode=ultra"
-                              "--lang=en_US"
-                              "--camel-case"))))
+(eval-after-load 'flymake
+  '(progn
+     (when (fboundp 'flymake-show-buffer-diagnostics)
+       (global-set-key (kbd "C-c ! b") #'flymake-show-buffer-diagnostics))
+     (when (fboundp 'flymake-show-project-diagnostics)
+       (global-set-key (kbd "C-c ! p") #'flymake-show-project-diagnostics))))
 
-;;; Text
-
-;;;; css-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(css-mode . css-ts-mode)))
-
-(with-eval-after-load 'css-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'css '("https://github.com/tree-sitter/tree-sitter-css"))))
-
-;;;; html-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(html-mode . html-ts-mode))
-  (add-to-list 'auto-mode-alist '("\\.html\\'" . html-ts-mode)))
-
-(with-eval-after-load 'html-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'html '("https://github.com/tree-sitter/tree-sitter-html"))))
-
-;;;; toml-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'major-mode-remap-alist '(conf-toml-mode . toml-ts-mode))
-  (add-to-list 'auto-mode-alist '("\\.toml\\'" . toml-ts-mode)))
-
-(with-eval-after-load 'toml-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'toml '("https://github.com/tree-sitter-grammars/tree-sitter-toml"))))
-
-;;;; yaml-ts-mode
-
-(when my-treesit-available-p
-  (add-to-list 'auto-mode-alist '("\\.ya?ml\\'" . yaml-ts-mode)))
-
-(with-eval-after-load 'yaml-ts-mode
-  (when my-treesit-available-p
-    (my--treesit-ensure-grammar 'yaml '("https://github.com/tree-sitter-grammars/tree-sitter-yaml"))))
+(eval-after-load 'flyspell
+  '(progn
+     (when (executable-find "aspell")
+       (setq ispell-program-name "aspell")
+       (setq ispell-extra-args '("--sug-mode=ultra"
+                                 "--lang=en_US"
+                                 "--camel-case")))))
 
 ;;; Version control
 
@@ -1626,22 +1072,24 @@ KEEP is one of `upper', `base', `lower'."
    (list (intern (completing-read "Keep: " '(upper base lower)))))
   (let ((resolve-func
          (pcase keep
-           ('upper #'smerge-keep-upper)
-           ('base  #'smerge-keep-base)
-           ('lower #'smerge-keep-lower)
+           (`upper #'smerge-keep-mine)
+           (`base  #'smerge-keep-base)
+           (`lower #'smerge-keep-other)
            (_ (error "Invalid keep value: %s" keep))))
         (resolve-count 0))
     (save-excursion
       (goto-char (point-min))
-      (while (ignore-errors (not (smerge-next)))
+      (while (re-search-forward "^<<<<<<< " nil t)
+        (beginning-of-line)
         (funcall resolve-func)
         (cl-incf resolve-count)))
     (if (> resolve-count 0)
         (message "Resolved %d conflict(s) using `%s'" resolve-count keep)
       (message "No conflicts found"))))
 
-(with-eval-after-load 'smerge-mode
-  (define-key smerge-basic-map "R" #'my-smerge-resolve-all))
+(eval-after-load 'smerge-mode
+  '(progn
+     (define-key smerge-basic-map "R" #'my-smerge-resolve-all)))
 
 ;;; Functions
 
@@ -1675,26 +1123,24 @@ KEEP is one of `upper', `base', `lower'."
 (global-set-key (kbd "C-c w t") #'my-toggle-two-split-window)
 
 (defun my-rotate-windows ()
-  "Rotate windows in clock-wise direction."
+  "Rotate buffers clockwise through the current frame's windows."
   (interactive)
-  (cond
-   ((not (> (count-windows) 1))
-    (user-error "Cannot rotate a single window"))
-   (t
-    (let ((i 1)
-          (window-num (count-windows)))
-      (while (< i window-num)
-        (let* ((w1 (elt (window-list) i))
-               (w2 (elt (window-list) (+ (% i window-num) 1)))
-               (b1 (window-buffer w1))
-               (b2 (window-buffer w2))
-               (s1 (window-start w1))
-               (s2 (window-start w2)))
-          (set-window-buffer w1 b2)
-          (set-window-buffer w2 b1)
-          (set-window-start w1 s2)
-          (set-window-start w2 s1)
-          (cl-incf i)))))))
+  (let* ((windows (window-list nil 'nomini))
+         (states (mapcar (lambda (window)
+                           (list (window-buffer window)
+                                 (window-start window)
+                                 (window-point window)))
+                         windows)))
+    (when (= (length windows) 1)
+      (user-error "Cannot rotate a single window"))
+    (when (cl-some #'window-dedicated-p windows)
+      (user-error "Cannot rotate dedicated windows"))
+    (cl-mapc (lambda (window state)
+               (set-window-buffer window (nth 0 state))
+               (set-window-start window (nth 1 state))
+               (set-window-point window (nth 2 state)))
+             (append (cdr windows) (list (car windows)))
+             states)))
 
 (global-set-key (kbd "C-c w r") #'my-rotate-windows)
 
@@ -1729,7 +1175,7 @@ With a prefix ARG, rename based on current name."
   "Copy file name to clipboard."
   (interactive)
   (let ((filename (if (equal major-mode 'dired-mode)
-                      default-directory
+                      (directory-file-name default-directory)
                     (buffer-file-name))))
     (if filename
         (progn
@@ -1742,11 +1188,12 @@ With a prefix ARG, rename based on current name."
 (defun my-browse-this-file ()
   "Open current file as a URL using `browse-url'."
   (interactive)
-  (if-let* ((file-name (buffer-file-name)))
-      (if (file-remote-p file-name)
-          (user-error "Cannot open remote file")
-        (browse-url-of-file file-name))
-    (user-error "Current buffer is not visiting a file")))
+  (let ((file-name (buffer-file-name)))
+    (if file-name
+        (if (file-remote-p file-name)
+            (user-error "Cannot open remote file")
+          (browse-url-of-file file-name))
+      (user-error "Current buffer is not visiting a file"))))
 
 (global-set-key (kbd "C-c f b") #'my-browse-this-file)
 
@@ -1760,8 +1207,8 @@ With a prefix ARG, rename based on current name."
            (fboundp 'w32-shell-execute))
       (w32-shell-execute "open" file)
     (call-process (pcase system-type
-                    ('darwin "open")
-                    ('cygwin "cygstart")
+                    (`darwin "open")
+                    (`cygwin "cygstart")
                     (_ "xdg-open"))
                   nil 0 nil file)))
 
@@ -1780,29 +1227,35 @@ With a prefix ARG, rename based on current name."
   (unless (buffer-file-name)
     (user-error "No file is currently being edited"))
   (when (yes-or-no-p
-         (format-message "Really delete `%s'?"
-                         (file-name-nondirectory buffer-file-name)))
+         (format "Really delete `%s'?"
+                 (file-name-nondirectory buffer-file-name)))
     (delete-file (buffer-file-name))
     (kill-this-buffer)))
 
 (global-set-key (kbd "C-c f d") #'my-delete-this-file)
 
 (defun my-delete-file (file)
-  "Recursively delete files named FILE under `default-directory'."
+  "Recursively delete files named FILE under `default-directory'.
+Do not descend into symbolic links."
   (interactive "sFile name: ")
   (let ((count 0))
-    (dolist (path
-             (directory-files-recursively
-              default-directory
-              (concat "\\`" (regexp-quote file) "\\'")))
-      (delete-file path)
-      (cl-incf count))
+    (cl-labels ((visit (directory)
+                  (dolist (path (directory-files directory t directory-files-no-dot-files-regexp))
+                    (cond
+                     ((file-directory-p path)
+                      (unless (file-symlink-p path) (visit path)))
+                     ((equal (file-name-nondirectory path) file)
+                      (delete-file path)
+                      (cl-incf count))))))
+      (visit default-directory))
     (message "%d file(s) named `%s' deleted." count file)))
 
 (global-set-key (kbd "C-c f D") #'my-delete-file)
 
 (defun my--sudo-file-path (file)
   "Get FILE's path with sudo."
+  (unless file
+    (user-error "Current buffer is not visiting a file or directory"))
   (let ((host (or (file-remote-p file 'host) "localhost")))
     (concat "/" (when (file-remote-p file)
                   (concat (file-remote-p file 'method) ":"
@@ -1890,11 +1343,11 @@ With a prefix ARG, rename based on current name."
 (defun my-show-socks-proxy ()
   "Show SOCKS proxy."
   (interactive)
-  (if (eq url-gateway-method 'socks)
+  (if (eq (bound-and-true-p url-gateway-method) 'socks)
       (message "Current SOCKS%d proxy is \"%s:%d\"."
-               (cadddr socks-server)
+               (nth 3 socks-server)
                (cadr   socks-server)
-               (caddr  socks-server))
+               (nth 2 socks-server))
     (message "No SOCKS proxy.")))
 
 (defun my-enable-socks-proxy ()
@@ -1919,7 +1372,7 @@ With a prefix ARG, rename based on current name."
 (defun my-toggle-socks-proxy ()
   "Toggle SOCKS proxy."
   (interactive)
-  (if (bound-and-true-p socks-noproxy)
+  (if (eq (bound-and-true-p url-gateway-method) 'socks)
       (my-disable-socks-proxy)
     (my-enable-socks-proxy)))
 
@@ -1941,7 +1394,9 @@ URL `https://emacs.wordpress.com/2007/01/16/quick-and-dirty-code-folding/'"
 
 URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
   (interactive)
-  (pop-to-buffer-same-window (get-scratch-buffer-create)))
+  (switch-to-buffer (get-buffer-create "*scratch*"))
+  (when (eq major-mode 'fundamental-mode)
+    (funcall initial-major-mode)))
 
 (global-set-key (kbd "C-c X") #'my-switch-scratch-buffer)
 
@@ -1952,8 +1407,8 @@ URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
                             (buffer-substring-no-properties
                              (region-beginning)
                              (region-end))
-                          (when-let* ((sym (thing-at-point 'symbol t)))
-                            (regexp-quote sym))))
+                          (let ((sym (thing-at-point 'symbol)))
+                            (when sym (regexp-quote (substring-no-properties sym))))))
          (prompt (if default-input
                      (format
                       "List lines matching (default %s): "
@@ -1989,10 +1444,10 @@ URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
         (progn
           (mapc #'disable-theme custom-enabled-themes)
           (load-theme (intern x) t))
-       (error
+      (error
        (mapc #'disable-theme custom-enabled-themes)
        (mapc (lambda (theme) (load-theme theme t))
-              (reverse enabled-themes))
+             (reverse enabled-themes))
        (message "Problem loading theme %s: %s"
                 x (error-message-string err))))))
 
@@ -2010,19 +1465,19 @@ URL `https://www.emacswiki.org/emacs/RecreateScratchBuffer'"
 Do NOT mess with special buffers."
   (interactive)
   (when (y-or-n-p "Kill all buffers but current with special ones? ")
-    (seq-do #'kill-buffer
-            (remove
-             (current-buffer)
-             (seq-filter #'buffer-file-name (buffer-list))))))
+    (mapc #'kill-buffer
+          (remove
+           (current-buffer)
+           (cl-remove-if-not #'buffer-file-name (buffer-list))))))
 
 (global-set-key (kbd "C-c m k") #'my-kill-other-buffers-without-special-ones)
 
 ;; https://stackoverflow.com/questions/3417438/closing-all-other-buffers-in-emacs
 (defun my-kill-other-buffers-with-special-ones ()
-  "Keep all buffers (include special buffers) but the current one."
+  "Kill all other buffers, including special buffers."
   (interactive)
   (when (y-or-n-p "Kill all buffers but current one? ")
-    (mapc #'kill-buffer (cdr (buffer-list (current-buffer))))))
+    (mapc #'kill-buffer (remq (current-buffer) (buffer-list)))))
 
 (global-set-key (kbd "C-c m K") #'my-kill-other-buffers-with-special-ones)
 
@@ -2143,7 +1598,9 @@ EVENT is the mouse event."
     ;; mouse released and Emacs realized that this is a click event.
     ;; We want to adjust point in both cases.
     (when (and (null (posn-object posn))
+               (numberp x) (numberp w)
                (> x (/ w 2))
+               (not (eobp))
                (not (eq (char-after) ?\n)))
       (forward-char))))
 
@@ -2155,15 +1612,17 @@ is set to after it."
   :lighter ""
   :group 'convenience
   (if my-delicate-click-mode
-      (advice-add 'mouse-set-point :after #'my--adjust-point-after-click)
-    (advice-remove 'mouse-set-point #'my--adjust-point-after-click)))
+      (ad-enable-advice 'mouse-set-point 'after 'my-delicate-click)
+    (ad-disable-advice 'mouse-set-point 'after 'my-delicate-click))
+  (ad-activate 'mouse-set-point))
 
-(defun my--pulse-highlight-region (fn beg end &rest args)
-  "Momentarily highlight the region between BEG and END."
-  (pulse-momentary-highlight-region beg end)
-  (apply fn beg end args))
+(defadvice mouse-set-point (after my-delicate-click disable)
+  "Adjust point according to the clicked half of the character."
+  (my--adjust-point-after-click (ad-get-arg 0)))
 
-(advice-add 'kill-ring-save :around #'my--pulse-highlight-region)
+(defadvice kill-ring-save (before my-pulse-highlight-region activate)
+  "Momentarily highlight the region being copied."
+  (pulse-momentary-highlight-region (ad-get-arg 0) (ad-get-arg 1)))
 
 (defcustom my-pangu-spacing-excluded-puncuation
   "，。！？、；：‘’“”『』「」【】（）《》"
@@ -2174,14 +1633,14 @@ is set to after it."
 (defcustom my-pangu-spacing-regexp
   (rx-to-string
    `(or (and (or (group-n 3 (any ,my-pangu-spacing-excluded-puncuation))
-                 (group-n 1 (or (category chinese-two-byte)
+                 (group-n 1 (or (category ?C)
                                 (category japanese-hiragana-two-byte)
                                 (category japanese-katakana-two-byte)
                                 (category korean-hangul-two-byte))))
              (group-n 2 (in "a-zA-Z0-9")))
         (and (group-n 1 (in "a-zA-Z0-9"))
              (or (group-n 3 (any ,my-pangu-spacing-excluded-puncuation))
-                 (group-n 2 (or (category chinese-two-byte)
+                 (group-n 2 (or (category ?C)
                                 (category japanese-hiragana-two-byte)
                                 (category japanese-katakana-two-byte)
                                 (category korean-hangul-two-byte))))))
@@ -2239,12 +1698,10 @@ Key is a symbol as the name, value is a plist specifying the search url."
   (interactive (list
                 (completing-read "Choose a search engine: "
                                  (mapcar #'car my-search-engine-alist))))
-  (let ((search-url (alist-get (intern search-engine)
-                               my-search-engine-alist
-                               nil nil #'equal)))
+  (let ((search-url (cdr (assq (intern search-engine) my-search-engine-alist))))
     (browse-url
-     (url-encode-url
-      (concat search-url
+     (concat search-url
+             (url-hexify-string
               (if mark-active
                   (buffer-substring-no-properties (region-beginning) (region-end))
                 (read-string
@@ -2253,19 +1710,18 @@ Key is a symbol as the name, value is a plist specifying the search url."
 (defun my-print-ascii-table (&optional arg)
   "Print the ASCII table.
 
-Default print to 256.  With a prefix ARG, print to specified
-number."
+Print character codes 0 through 255 by default.
+With a prefix ARG, prompt for the number of character codes to print."
   (interactive "P")
   (let ((num (if arg
                  (read-number "Input a number: ")
-               256))
-        (i 0))
+               256)))
     (switch-to-buffer "*ASCII*")
-    (erase-buffer)
-    (insert (format "ASCII characters up to number %d.\n" num))
-    (while (< i num)
-      (cl-incf i)
-      (insert (format "%4d %c\n" i i)))
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert (format "Character codes from 0 to %d.\n" (1- num)))
+      (dotimes (i num)
+        (insert (format "%4d %c\n" i i))))
     (special-mode)
     (goto-char (point-min))))
 
@@ -2275,7 +1731,10 @@ number."
   (message
    (let ((list '()))
      (mapatoms (lambda (sym)
-                 (when (special-form-p sym)
+                 (when (and (fboundp sym)
+                            (subrp (symbol-function sym))
+                            (eq (cdr (subr-arity (symbol-function sym)))
+                                'unevalled))
                    (push sym list))))
      (mapconcat (lambda (sym)
                   (format "%s 平安" sym))
@@ -2289,7 +1748,8 @@ number."
 (message "Emacs ready in %s with %d garbage collections."
          (format "%.2f seconds"
                  (float-time
-                  (time-subtract after-init-time before-init-time)))
+                  (time-subtract (or after-init-time (current-time))
+                                 before-init-time)))
          gcs-done)
 
 ;;; _

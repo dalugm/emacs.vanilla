@@ -68,8 +68,8 @@ This *Why Emacs* section credits to [[https://github.com/remacs/remacs][Remacs]]
 
 This configuration is about vanilla Emacs.
 
-It requires GNU Emacs 29.1 or newer and uses only built-in Emacs Lisp
-packages.
+It requires GNU Emacs 24.3 or newer and uses only built-in Emacs Lisp
+packages. It is intended for basic editing on older, offline servers.
 
 * Install
 
