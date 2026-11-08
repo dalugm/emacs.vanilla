@@ -284,6 +284,9 @@ See also: `package-archives'."
 ;; Open header file under cursor
 (global-set-key (kbd "C-x C-o") #'ffap)
 
+(global-set-key (kbd "C-x C-j") #'dired-jump)
+(global-set-key (kbd "C-x 4 C-j") #'dired-jump-other-window)
+
 ;; A complementary binding to the apropos-command (C-h a)
 (define-key 'help-command "A" #'apropos)
 
